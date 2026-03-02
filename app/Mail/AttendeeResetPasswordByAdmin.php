@@ -42,32 +42,54 @@ class AttendeeResetPasswordByAdmin extends Mailable
      *
      * @return \Illuminate\Mail\Mailables\Content
      */
+    // public function content()
+    // {
+    //     if ($this->details['eventYear'] == "2025") {
+    //         if ($this->details['eventCategory'] == "ANC") {
+    //             return new Content(
+    //                 markdown: 'emails.2025.anc.attendee-reset-password-by-admin-mail',
+    //             );
+    //         } else if ($this->details['eventCategory'] == "RCC") {
+    //             return new Content(
+    //                 markdown: 'emails.2025.rcc.attendee-reset-password-by-admin-mail',
+    //             );
+    //         } else if ($this->details['eventCategory'] == "AF") {
+    //             return new Content(
+    //                 markdown: 'emails.2025.af.attendee-reset-password-by-admin-mail',
+    //             );
+    //         } else {
+    //             return new Content(
+    //                 markdown: 'emails.attendee-reset-password-by-admin-mail',
+    //             );
+    //         }
+    //     } else {
+    //         return new Content(
+    //             markdown: 'emails.attendee-reset-password-by-admin-mail',
+    //         );
+    //     }
+    // }
+
+
+
     public function content()
-    {
-        if ($this->details['eventYear'] == "2025") {
-            if ($this->details['eventCategory'] == "ANC") {
-                return new Content(
-                    markdown: 'emails.2025.anc.attendee-reset-password-by-admin-mail',
-                );
-            } else if ($this->details['eventCategory'] == "RCC") {
-                return new Content(
-                    markdown: 'emails.2025.rcc.attendee-reset-password-by-admin-mail',
-                );
-            } else if ($this->details['eventCategory'] == "AF") {
-                return new Content(
-                    markdown: 'emails.2025.af.attendee-reset-password-by-admin-mail',
-                );
-            } else {
-                return new Content(
-                    markdown: 'emails.attendee-reset-password-by-admin-mail',
-                );
-            }
-        } else {
-            return new Content(
-                markdown: 'emails.attendee-reset-password-by-admin-mail',
-            );
-        }
+{
+    $year = (string) ($this->details['eventYear'] ?? '');
+    $category = strtoupper($this->details['eventCategory'] ?? '');
+
+    $allowedYears = ['2025', '2026'];
+    $allowedCategories = ['ANC', 'RCC', 'RIC', 'AF'];
+
+    if (in_array($year, $allowedYears) && in_array($category, $allowedCategories)) {
+        return new Content(
+            markdown: "emails.$year." . strtolower($category) . ".attendee-reset-password-by-admin-mail",
+        );
     }
+
+    return new Content(
+        markdown: 'emails.attendee-reset-password-by-admin-mail',
+    );
+}
+
 
     /**
      * Get the attachments for the message.

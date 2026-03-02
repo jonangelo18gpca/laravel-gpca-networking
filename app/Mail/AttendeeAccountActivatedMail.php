@@ -62,6 +62,24 @@ class AttendeeAccountActivatedMail extends Mailable
                     markdown: 'emails.attendee-account-activated-mail',
                 );
             }
+        } else if ($this->details['eventYear'] == "2026") {
+            if ($this->details['eventCategory'] == "RIC") {
+                return new Content(
+                    markdown: 'emails.2026.ric.attendee-account-activated-mail',
+                );
+            } else if ($this->details['eventCategory'] == "RCC") {
+                return new Content(
+                    markdown: 'emails.2026.rcc.attendee-account-activated-mail',
+                );
+            } else if ($this->details['eventCategory'] == "AF") {
+                return new Content(
+                    markdown: 'emails.2026.af.attendee-account-activated-mail',
+                );
+            } else {
+                return new Content(
+                    markdown: 'emails.attendee-account-activated-mail',
+                );
+            }
         } else {
             return new Content(
                 markdown: 'emails.attendee-account-activated-mail',

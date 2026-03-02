@@ -49,50 +49,75 @@ class AttendeeMeetingAcceptedMail extends Mailable
      *
      * @return \Illuminate\Mail\Mailables\Content
      */
+    // public function content()
+    // {
+    //     if ($this->isReceiver) {
+    //         if ($this->details['eventYear'] == "2025") {
+    //             if ($this->details['eventCategory'] == "RCC") {
+    //                 return new Content(
+    //                     markdown: 'emails.2025.rcc.meeting.accepted.receiver-mail',
+    //                 );
+    //             } else if ($this->details['eventCategory'] == "AF") {
+    //                 return new Content(
+    //                     markdown: 'emails.2025.af.meeting.accepted.receiver-mail',
+    //                 );
+    //             } else {
+    //                 return new Content(
+    //                     markdown: 'emails.meeting.accepted.receiver-mail',
+    //                 );
+    //             }
+    //         } else {
+    //             return new Content(
+    //                 markdown: 'emails.meeting.accepted.receiver-mail',
+    //             );
+    //         }
+    //     } else {
+    //         if ($this->details['eventYear'] == "2025") {
+    //             if ($this->details['eventCategory'] == "RCC") {
+    //                 return new Content(
+    //                     markdown: 'emails.2025.rcc.meeting.accepted.requester-mail',
+    //                 );
+    //             } else if ($this->details['eventCategory'] == "AF") {
+    //                 return new Content(
+    //                     markdown: 'emails.2025.af.meeting.accepted.requester-mail',
+    //                 );
+    //             } else {
+    //                 return new Content(
+    //                     markdown: 'emails.meeting.accepted.requester-mail',
+    //                 );
+    //             }
+    //         } else {
+    //             return new Content(
+    //                 markdown: 'emails.meeting.accepted.requester-mail',
+    //             );
+    //         }
+
+            
+    //     }
+
+        
+    // }
+
+
     public function content()
-    {
-        if ($this->isReceiver) {
-            if ($this->details['eventYear'] == "2025") {
-                if ($this->details['eventCategory'] == "RCC") {
-                    return new Content(
-                        markdown: 'emails.2025.rcc.meeting.accepted.receiver-mail',
-                    );
-                } else if ($this->details['eventCategory'] == "AF") {
-                    return new Content(
-                        markdown: 'emails.2025.af.meeting.accepted.receiver-mail',
-                    );
-                } else {
-                    return new Content(
-                        markdown: 'emails.meeting.accepted.receiver-mail',
-                    );
-                }
-            } else {
-                return new Content(
-                    markdown: 'emails.meeting.accepted.receiver-mail',
-                );
-            }
-        } else {
-            if ($this->details['eventYear'] == "2025") {
-                if ($this->details['eventCategory'] == "RCC") {
-                    return new Content(
-                        markdown: 'emails.2025.rcc.meeting.accepted.requester-mail',
-                    );
-                } else if ($this->details['eventCategory'] == "AF") {
-                    return new Content(
-                        markdown: 'emails.2025.af.meeting.accepted.requester-mail',
-                    );
-                } else {
-                    return new Content(
-                        markdown: 'emails.meeting.accepted.requester-mail',
-                    );
-                }
-            } else {
-                return new Content(
-                    markdown: 'emails.meeting.accepted.requester-mail',
-                );
-            }
-        }
+{
+    $year = $this->details['eventYear'] ?? null;
+    $category = strtoupper($this->details['eventCategory'] ?? '');
+    $type = $this->isReceiver ? 'receiver-mail' : 'requester-mail';
+
+    $allowedYears = ['2025', '2026'];
+    $allowedCategories = ['RCC', 'RIC', 'AF'];
+
+    if (in_array($year, $allowedYears) && in_array($category, $allowedCategories)) {
+        return new Content(
+            markdown: "emails.$year." . strtolower($category) . ".meeting.accepted.$type",
+        );
     }
+
+    return new Content(
+        markdown: "emails.meeting.accepted.$type",
+    );
+}
 
     /**
      * Get the attachments for the message.

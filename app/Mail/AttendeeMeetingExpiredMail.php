@@ -45,28 +45,50 @@ class AttendeeMeetingExpiredMail extends Mailable
      *
      * @return \Illuminate\Mail\Mailables\Content
      */
+    // public function content()
+    // {
+    //     if ($this->details['eventYear'] == "2025") {
+    //         if ($this->details['eventCategory'] == "RCC") {
+    //             return new Content(
+    //                 markdown: 'emails.2025.rcc.meeting.expired.requester-mail',
+    //             );
+    //         } else if ($this->details['eventCategory'] == "AF") {
+    //             return new Content(
+    //                 markdown: 'emails.2025.af.meeting.expired.requester-mail',
+    //             );
+    //         } else {
+    //             return new Content(
+    //                 markdown: 'emails.meeting.expired.requester-mail',
+    //             );
+    //         }
+    //     } else {
+    //         return new Content(
+    //             markdown: 'emails.meeting.expired.requester-mail',
+    //         );
+    //     }
+    // }
+
+
+
     public function content()
-    {
-        if ($this->details['eventYear'] == "2025") {
-            if ($this->details['eventCategory'] == "RCC") {
-                return new Content(
-                    markdown: 'emails.2025.rcc.meeting.expired.requester-mail',
-                );
-            } else if ($this->details['eventCategory'] == "AF") {
-                return new Content(
-                    markdown: 'emails.2025.af.meeting.expired.requester-mail',
-                );
-            } else {
-                return new Content(
-                    markdown: 'emails.meeting.expired.requester-mail',
-                );
-            }
-        } else {
-            return new Content(
-                markdown: 'emails.meeting.expired.requester-mail',
-            );
-        }
+{
+    $year = (string) ($this->details['eventYear'] ?? '');
+    $category = strtoupper($this->details['eventCategory'] ?? '');
+
+    $allowedYears = ['2025', '2026'];
+    $allowedCategories = ['RCC', 'RIC', 'AF'];
+
+    if (in_array($year, $allowedYears) && in_array($category, $allowedCategories)) {
+        return new Content(
+            markdown: "emails.$year." . strtolower($category) . ".meeting.expired.requester-mail",
+        );
     }
+
+    return new Content(
+        markdown: "emails.meeting.expired.requester-mail",
+    );
+}
+
 
     /**
      * Get the attachments for the message.

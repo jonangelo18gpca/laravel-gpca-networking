@@ -62,6 +62,24 @@ class AttendeeActivationAccountMail extends Mailable
                     markdown: 'emails.attendee-activation-account-otp-mail',
                 );
             }
+        } elseif ($this->details['eventYear'] == "2026") {
+            if ($this->details['eventCategory'] == "RIC") {
+                return new Content(
+                    markdown: 'emails.2026.ric.attendee-activation-account-otp-mail',
+                );
+            } else if ($this->details['eventCategory'] == "RCC") {
+                return new Content(
+                    markdown: 'emails.2026.rcc.attendee-activation-account-otp-mail',
+                );
+            } else if ($this->details['eventCategory'] == "AF") {
+                return new Content(
+                    markdown: 'emails.2026.af.attendee-activation-account-otp-mail',
+                );
+            } else {
+                return new Content(
+                    markdown: 'emails.attendee-activation-account-otp-mail',
+                );
+            }
         } else {
             return new Content(
                 markdown: 'emails.attendee-activation-account-otp-mail',

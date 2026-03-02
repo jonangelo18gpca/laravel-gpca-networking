@@ -2,9 +2,9 @@
 
 {{-- <img src="https://gpca.org.ae/conferences/rcc/wp-content/uploads/2025/10/Eshot-header.jpg" alt="app" width="600" style="margin-top:25px;display:block;max-width:100%;width:100%;height:auto;border:0;outline:none;text-decoration:none;"> --}}
 
-<p class="normal" style="margin-top: 15px;">Hi {{ $details['requesterName'] }},</p>
+<p class="normal" style="margin-top: 15px;">Hi {{ $details['receiverName'] }},</p>
 
-<p class="normal" style="margin-top: 15px;">Your meeting request to <strong>{{ $details['receiverName'] }}</strong> has been successfully submitted via the <strong>{{ $details['eventName'] }}</strong> networking app.</p>
+<p class="normal" style="margin-top: 15px;">You have received a new meeting request from <strong>{{ $details['requesterName'] }}</strong> via the <strong>{{ $details['eventName'] }}</strong> networking app.</p>
 
 <p class="normal" style="margin-top: 15px;">Meeting Details:</p>
 <ul class="list">
@@ -16,7 +16,14 @@
     
 </ul>
 
-<p class="normal" style="margin-top: 15px;">We’ve notified the other party. You will receive a notification once they respond to your request.</p>
+@if($details['isAttendee'])
+<p class="normal" style="margin-top: 15px;">To respond to this meeting request, please open the networking app and accept or decline the request.</p>
+@else
+<p class="normal" style="margin-top: 15px;">To respond to this meeting request, click the button below.</p>
+<x-mail::button :url="$details['meetingRespondLink']" color="registration">
+Respond to Meeting Request
+</x-mail::button>
+@endif
 
 <p class="normal" style="margin-top: 15px;">We look forward to helping you connect meaningfully during the event.</p>
 

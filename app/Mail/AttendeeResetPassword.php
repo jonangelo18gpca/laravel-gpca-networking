@@ -42,32 +42,52 @@ class AttendeeResetPassword extends Mailable
      *
      * @return \Illuminate\Mail\Mailables\Content
      */
+    // public function content()
+    // {
+    //     if ($this->details['eventYear'] == "2025") {
+    //         if ($this->details['eventCategory'] == "ANC") {
+    //             return new Content(
+    //                 markdown: 'emails.2025.anc.attendee-reset-password-mail',
+    //             );
+    //         } else if ($this->details['eventCategory'] == "RCC") {
+    //             return new Content(
+    //                 markdown: 'emails.2025.rcc.attendee-reset-password-mail',
+    //             );
+    //         } else if ($this->details['eventCategory'] == "AF") {
+    //             return new Content(
+    //                 markdown: 'emails.2025.af.attendee-reset-password-mail',
+    //             );
+    //         } else {
+    //             return new Content(
+    //                 markdown: 'emails.attendee-reset-password-mail',
+    //             );
+    //         }
+    //     } else {
+    //         return new Content(
+    //             markdown: 'emails.attendee-reset-password-mail',
+    //         );
+    //     }
+    // }
+
+
     public function content()
-    {
-        if ($this->details['eventYear'] == "2025") {
-            if ($this->details['eventCategory'] == "ANC") {
-                return new Content(
-                    markdown: 'emails.2025.anc.attendee-reset-password-mail',
-                );
-            } else if ($this->details['eventCategory'] == "RCC") {
-                return new Content(
-                    markdown: 'emails.2025.rcc.attendee-reset-password-mail',
-                );
-            } else if ($this->details['eventCategory'] == "AF") {
-                return new Content(
-                    markdown: 'emails.2025.af.attendee-reset-password-mail',
-                );
-            } else {
-                return new Content(
-                    markdown: 'emails.attendee-reset-password-mail',
-                );
-            }
-        } else {
-            return new Content(
-                markdown: 'emails.attendee-reset-password-mail',
-            );
-        }
+{
+    $year = (string) ($this->details['eventYear'] ?? '');
+    $category = strtoupper($this->details['eventCategory'] ?? '');
+
+    $allowedYears = ['2025', '2026'];
+    $allowedCategories = ['ANC', 'RCC', 'RIC', 'AF'];
+
+    if (in_array($year, $allowedYears) && in_array($category, $allowedCategories)) {
+        return new Content(
+            markdown: "emails.$year." . strtolower($category) . ".attendee-reset-password-mail",
+        );
     }
+
+    return new Content(
+        markdown: 'emails.attendee-reset-password-mail',
+    );
+}
 
     /**
      * Get the attachments for the message.
