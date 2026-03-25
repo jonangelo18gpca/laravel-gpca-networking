@@ -30,15 +30,29 @@ class APICheckAttendeeExists
 
         $attendee = Attendee::where('id', $attendeeId)->where('event_id', $eventId)->where('is_active', true)->exists();
 
+        // if (!$attendee) {
+        //     return $this->error(null, "Attendee doesn't exist or is not active for this event", 404);
+        // }
+
         if (!$attendee) {
-            return $this->error(null, "Attendee doesn't exist or is not active for this event", 404);
-        }
+    return response()->json([
+        'status' => 'invalid_session',
+        'message' => 'Session expired. Please login again.'
+    ], 401);
+}
 
         $authenticatedUser = Auth::user();
-        if ($authenticatedUser->id !== $attendeeId) {
-            Log::warning("Unauthorized access attempt for attendee ID $attendeeId in event ID $eventId");
-            return $this->error(null, "Unauthorized access", 403);
-        }
+        // if ($authenticatedUser->id !== $attendeeId) {
+        //     Log::warning("Unauthorized access attempt for attendee ID $attendeeId in event ID $eventId");
+        //     return $this->error(null, "Unauthorized access", 403);
+        // }
+
+        if (!$authenticatedUser || $authenticatedUser->id !== $attendeeId) {
+    return response()->json([
+        'status' => 'invalid_session',
+        'message' => 'Unauthorized. Please login again.'
+    ], 401);
+}
 
         return $next($request);
     }
