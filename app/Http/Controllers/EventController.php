@@ -21,6 +21,7 @@ use App\Models\Sponsor;
 use App\Models\SponsorType;
 use App\Traits\HttpResponses;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class EventController extends Controller
 {
@@ -316,9 +317,21 @@ class EventController extends Controller
 
     public function apiEventHomepage($apiCode, $eventCategory, $eventId, $attendeeId)
     {
+        Log::info('DEBUG HOMEPAGE', [
+    'eventId' => $eventId,
+    'eventCategory' => $eventCategory,
+    'attendeeId' => $attendeeId,
+]);
         try {
             $event = Event::with(['eventLogoInverted', 'eventBanner', 'appSponsorLogo'])->where('id', $eventId)->where('category', $eventCategory)->first();
+            Log::info('CHECK ATTENDEE', [
+    'attendeeId' => $attendeeId,
+    'eventId' => $eventId,
+]);
             $attendee = Attendee::with('pfp')->where('id', $attendeeId)->where('event_id', $eventId)->first();
+            Log::info('RESULT', [
+    'attendee_found' => $attendee ? true : false,
+]);
             $attendeeNotificationsCount = AttendeeNotification::with('notification')->where('event_id', $eventId)->where('attendee_id', $attendeeId)->where('is_seen', false)->count();
 
 
@@ -369,9 +382,22 @@ class EventController extends Controller
 
     public function apiEventHomepagev2($apiCode, $eventCategory, $eventId, $attendeeId)
     {
+
+            Log::info('DEBUG HOMEPAGEV2', [
+    'eventId' => $eventId,
+    'eventCategory' => $eventCategory,
+    'attendeeId' => $attendeeId,
+]);
         try {
             $event = Event::with(['eventBanner'])->where('id', $eventId)->where('category', $eventCategory)->first();
+            Log::info('CHECK ATTENDEE', [
+    'attendeeId' => $attendeeId,
+    'eventId' => $eventId,
+]);
             $attendee = Attendee::with('pfp')->where('id', $attendeeId)->where('event_id', $eventId)->first();
+            Log::info('RESULT', [
+    'attendee_found' => $attendee ? true : false,
+]);
             $attendeeNotificationsCount = AttendeeNotification::with('notification')->where('event_id', $eventId)->where('attendee_id', $attendeeId)->where('is_seen', false)->count();
 
             if ($eventCategory == "PC") {
