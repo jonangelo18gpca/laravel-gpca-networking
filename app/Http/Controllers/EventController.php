@@ -324,11 +324,14 @@ class EventController extends Controller
 
 
             $data = [
-                'event_logo_inverted' => $event->eventLogoInverted->file_url ?? null,
-                'event_banner' => $event->eventBanner->file_url ?? null,
+                // 'event_logo_inverted' => $event->eventLogoInverted->file_url ?? null,
+                'event_logo_inverted' => optional($event->eventLogoInverted)->file_url,
+                // 'event_banner' => $event->eventBanner->file_url ?? null,
+                'event_banner' => optional($event->eventBanner)->file_url,
                 'app_sponsor_logo' => $event->appSponsorLogo->file_url ?? null,
                 'attendee_details' => [
-                    'pfp' => $attendee->pfp->file_url ?? asset('assets/images/feature-image-placeholder.jpg'),
+                    // 'pfp' => $attendee->pfp->file_url ?? asset('assets/images/feature-image-placeholder.jpg'),
+                    'pfp' => optional($attendee->pfp)->file_url ?? asset('assets/images/feature-image-placeholder.jpg'),
                     'salutation' => $attendee->salutation,
                     'first_name' => $attendee->first_name,
                     'middle_name' => $attendee->middle_name,
@@ -482,10 +485,12 @@ class EventController extends Controller
             ];
 
             $data = [
-                'event_banner' => $event->eventBanner->file_url ?? null,
+                // 'event_banner' => $event->eventBanner->file_url ?? null,
+                'event_banner' => optional($event->eventBanner)->file_url,
                 'sponsors_banner_carousel' => $sponsorsBannerCarousel,
                 'attendee_details' => [
-                    'pfp' => $attendee->pfp->file_url ?? asset('assets/images/feature-image-placeholder.jpg'),
+                    // 'pfp' => $attendee->pfp->file_url ?? asset('assets/images/feature-image-placeholder.jpg'),
+                    'pfp' => optional($attendee->pfp)->file_url ?? asset('assets/images/feature-image-placeholder.jpg'),
                     'salutation' => $attendee->salutation,
                     'first_name' => $attendee->first_name,
                     'middle_name' => $attendee->middle_name,
