@@ -584,7 +584,18 @@ class AttendeesController extends Controller
     public function apiAttendeeProfile($apiCode, $eventCategory, $eventId, $attendeeId)
     {
         try {
-            $attendee = Attendee::with('pfp')->where('id', $attendeeId)->where('event_id', $eventId)->first();
+            // $attendee = Attendee::with('pfp')->where('id', $attendeeId)->where('event_id', $eventId)->first();
+
+            $authUser = auth()->user();
+
+            if (!$authUser) {
+                return response()->json([
+                    'message' => 'Unauthenticated'
+                ], 401);
+            }
+
+            // 🔥 FIX: manually reload user from DB
+            $attendee = Attendee::with('pfp')->find($authUser->id);
 
             if ($attendee->pass_type == PassTypes::FULL_MEMBER->value) {
                 $passTypeName = "Full Member";
@@ -848,7 +859,8 @@ class AttendeesController extends Controller
             $uniqueFilename = $filename . '_' . time() . '_' . Str::random(10) . '.' . $extension;
             $fileDirectory = FileUploadDirectory::ATTENDEES->value;
             $path = $request->pfp->storeAs($fileDirectory, $uniqueFilename, 's3');
-            $fileUrl = Storage::disk('s3')->url($path);
+            // $fileUrl = Storage::disk('s3')->url($path);
+            $fileUrl = rtrim(env('AWS_URL'), '/') . '/' . ltrim($path, '/');
             $fileSize = $request->pfp->getSize();
             $dateUploaded = now();
 
