@@ -324,14 +324,7 @@ class EventController extends Controller
 ]);
         try {
             $event = Event::with(['eventLogoInverted', 'eventBanner', 'appSponsorLogo'])->where('id', $eventId)->where('category', $eventCategory)->first();
-            Log::info('CHECK ATTENDEE', [
-    'attendeeId' => $attendeeId,
-    'eventId' => $eventId,
-]);
             $attendee = Attendee::with('pfp')->where('id', $attendeeId)->where('event_id', $eventId)->first();
-            Log::info('RESULT', [
-    'attendee_found' => $attendee ? true : false,
-]);
             $attendeeNotificationsCount = AttendeeNotification::with('notification')->where('event_id', $eventId)->where('attendee_id', $attendeeId)->where('is_seen', false)->count();
 
 
@@ -383,21 +376,10 @@ class EventController extends Controller
     public function apiEventHomepagev2($apiCode, $eventCategory, $eventId, $attendeeId)
     {
 
-            Log::info('DEBUG HOMEPAGEV2', [
-    'eventId' => $eventId,
-    'eventCategory' => $eventCategory,
-    'attendeeId' => $attendeeId,
-]);
+    
         try {
             $event = Event::with(['eventBanner'])->where('id', $eventId)->where('category', $eventCategory)->first();
-            Log::info('CHECK ATTENDEE', [
-    'attendeeId' => $attendeeId,
-    'eventId' => $eventId,
-]);
             $attendee = Attendee::with('pfp')->where('id', $attendeeId)->where('event_id', $eventId)->first();
-            Log::info('RESULT', [
-    'attendee_found' => $attendee ? true : false,
-]);
             $attendeeNotificationsCount = AttendeeNotification::with('notification')->where('event_id', $eventId)->where('attendee_id', $attendeeId)->where('is_seen', false)->count();
 
             if ($eventCategory == "PC") {
@@ -589,7 +571,7 @@ class EventController extends Controller
         $sessions = Session::where('event_id', $eventId)->where('is_active', true)->orderBy('session_date', 'ASC')->orderBy('start_time', 'ASC')->get();
 
         if ($sessions->isEmpty()) {
-            return null;
+            return [];
         }
 
         $data = array();
@@ -627,7 +609,7 @@ class EventController extends Controller
         $event = Event::where('id', $eventId)->where('category', $eventCategory)->first();
 
         if ($speakers->isEmpty()) {
-            return null;
+            return [];
         }
 
         $data = array();
@@ -696,7 +678,7 @@ class EventController extends Controller
         $event = Event::where('id', $eventId)->where('category', $eventCategory)->first();
 
         if ($sessions->isEmpty()) {
-            return null;
+            return [];
         }
 
         $data = array();
@@ -889,7 +871,7 @@ class EventController extends Controller
         $sponsorTypes = SponsorType::where('event_id', $eventId)->orderBy('datetime_added', 'ASC')->get();
 
         if ($sponsors->isEmpty()) {
-            return null;
+            return [];
         }
 
         $data = array();
@@ -925,7 +907,7 @@ class EventController extends Controller
         $exhibitors = Exhibitor::with('logo')->where('event_id', $eventId)->where('is_active', true)->orderBy('datetime_added', 'ASC')->get();
 
         if ($exhibitors->isEmpty()) {
-            return null;
+            return [];
         }
 
         $data = array();
@@ -945,7 +927,7 @@ class EventController extends Controller
         $meetingRoomPartners = MeetingRoomPartner::with('logo')->where('event_id', $eventId)->where('is_active', true)->orderBy('datetime_added', 'ASC')->get();
 
         if ($meetingRoomPartners->isEmpty()) {
-            return null;
+            return [];
         }
 
         $data = array();
@@ -966,7 +948,7 @@ class EventController extends Controller
         $mediaPartners = MediaPartner::with('logo')->where('event_id', $eventId)->where('is_active', true)->orderBy('datetime_added', 'ASC')->get();
 
         if ($mediaPartners->isEmpty()) {
-            return null;
+            return [];
         }
 
         $data = array();
@@ -986,7 +968,7 @@ class EventController extends Controller
         $attendeeNotifications = AttendeeNotification::with('notification')->where('event_id', $eventId)->where('attendee_id', $attendeeId)->orderBy('sent_datetime', 'DESC')->get();
 
         if ($attendeeNotifications->isEmpty()) {
-            return null;
+            return [];
         }
 
         $data = array();
