@@ -413,7 +413,14 @@ class EventController extends Controller
                     "http://gpca.org.ae/conferences/rcc/wp-content/uploads/2025/10/sponsor1.jpg",
                     "http://gpca.org.ae/conferences/rcc/wp-content/uploads/2025/10/event1.jpg",
                 ];
-            } else {
+            } else if ($eventCategory == "RIC") {
+                $sponsorsBannerCarousel = [
+                    "http://gpca.org.ae/conferences/rcc/wp-content/uploads/2025/10/sponsor1.jpg",
+                    "http://gpca.org.ae/conferences/rcc/wp-content/uploads/2025/10/event1.jpg",
+                ];
+            } 
+            
+            else {
                 $sponsorsBannerCarousel = [
                     "https://www.gpcaforum.com/wp-content/uploads/2025/12/slide1.jpg",
                     "https://www.gpcaforum.com/wp-content/uploads/2025/10/slide2.jpg",
