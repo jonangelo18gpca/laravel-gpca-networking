@@ -317,11 +317,8 @@ class EventController extends Controller
 
     public function apiEventHomepage($apiCode, $eventCategory, $eventId, $attendeeId)
     {
-        Log::info('DEBUG HOMEPAGE', [
-            'eventId' => $eventId,
-            'eventCategory' => $eventCategory,
-            'attendeeId' => $attendeeId,
-        ]);
+Log::info('AUTH USER API Event Homepage', ['user' => auth()->user()]);
+
         try {
             $event = Event::with(['eventLogoInverted', 'eventBanner', 'appSponsorLogo'])->where('id', $eventId)->where('category', $eventCategory)->first();
             // $attendee = Attendee::with('pfp')->where('id', $attendeeId)->where('event_id', $eventId)->first();
@@ -366,7 +363,8 @@ class EventController extends Controller
                     'floor_plan_3d_image_link' => $event->floor_plan_3d_image_link,
                     'floor_plan_exhibition_image_link' => $event->floor_plan_exhibition_image_link,
                 ],
-                'notifications' => $this->apiGetNotifications($eventCategory, $eventId, $attendeeId),
+                // 'notifications' => $this->apiGetNotifications($eventCategory, $eventId, $attendeeId),
+                'notifications' => $this->apiGetNotifications($eventCategory, $eventId, $attendee->id),
             ];
             return $this->success($data, "Event Homepage details", 200);
         } catch (\Exception $e) {
@@ -969,7 +967,21 @@ class EventController extends Controller
 
     public function apiGetNotifications($eventCategory, $eventId, $attendeeId)
     {
-        $attendeeNotifications = AttendeeNotification::with('notification')->where('event_id', $eventId)->where('attendee_id', $attendee->id)->orderBy('sent_datetime', 'DESC')->get();
+        // $attendeeNotifications = AttendeeNotification::with('notification')->where('event_id', $eventId)->where('attendee_id', $attendeeId)->orderBy('sent_datetime', 'DESC')->get();
+Log::info('AUTH USER API GetNotif', ['user' => auth()->user()]);
+
+            $attendee = auth()->user();
+
+    if (!$attendee) {
+        return [];
+    }
+
+    $attendeeNotifications = AttendeeNotification::with('notification')
+        ->where('event_id', $eventId)
+        ->where('attendee_id', $attendee->id)
+        ->orderBy('sent_datetime', 'DESC')
+        ->get();
+
 
         if ($attendeeNotifications->isEmpty()) {
             return [];
