@@ -318,10 +318,10 @@ class EventController extends Controller
     public function apiEventHomepage($apiCode, $eventCategory, $eventId, $attendeeId)
     {
         Log::info('DEBUG HOMEPAGE', [
-    'eventId' => $eventId,
-    'eventCategory' => $eventCategory,
-    'attendeeId' => $attendeeId,
-]);
+            'eventId' => $eventId,
+            'eventCategory' => $eventCategory,
+            'attendeeId' => $attendeeId,
+        ]);
         try {
             $event = Event::with(['eventLogoInverted', 'eventBanner', 'appSponsorLogo'])->where('id', $eventId)->where('category', $eventCategory)->first();
             $attendee = Attendee::with('pfp')->where('id', $attendeeId)->where('event_id', $eventId)->first();
@@ -376,9 +376,13 @@ class EventController extends Controller
     public function apiEventHomepagev2($apiCode, $eventCategory, $eventId, $attendeeId)
     {
 
-    
+
         try {
             $event = Event::with(['eventBanner'])->where('id', $eventId)->where('category', $eventCategory)->first();
+            if (!$event) {
+                Log::error('EVENT NOT FOUND', compact('eventId', 'eventCategory'));
+                return $this->error(null, "Event not found", 404);
+            }
             $attendee = Attendee::with('pfp')->where('id', $attendeeId)->where('event_id', $eventId)->first();
             $attendeeNotificationsCount = AttendeeNotification::with('notification')->where('event_id', $eventId)->where('attendee_id', $attendeeId)->where('is_seen', false)->count();
 
@@ -426,9 +430,7 @@ class EventController extends Controller
                     "http://gpca.org.ae/conferences/rcc/wp-content/uploads/2025/10/sponsor1.jpg",
                     "http://gpca.org.ae/conferences/rcc/wp-content/uploads/2025/10/event1.jpg",
                 ];
-            } 
-            
-            else {
+            } else {
                 $sponsorsBannerCarousel = [
                     "https://www.gpcaforum.com/wp-content/uploads/2025/12/slide1.jpg",
                     "https://www.gpcaforum.com/wp-content/uploads/2025/10/slide2.jpg",
