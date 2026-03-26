@@ -581,8 +581,15 @@ class AttendeesController extends Controller
         }
     }
 
-    public function apiAttendeeProfile($apiCode, $eventCategory, $eventId, $attendeeId)
+    // public function apiAttendeeProfile($apiCode, $eventCategory, $eventId, $attendeeId)
+public function apiAttendeeProfile(Request $request, $api_code, $eventCategory, $eventId, $attendeeId)
     {
+
+    Log::info('AUTO LOGIN CHECK', [
+        'token' => $request->bearerToken(),
+        'user' => auth()->user(),
+        'attendeeId_param' => $attendeeId,
+    ]);
         try {
             $attendee = Attendee::with('pfp')->where('id', $attendeeId)->where('event_id', $eventId)->first();
 
