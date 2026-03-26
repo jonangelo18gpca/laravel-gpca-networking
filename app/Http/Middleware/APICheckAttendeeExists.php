@@ -34,9 +34,15 @@ class APICheckAttendeeExists
             return $this->error(null, "Attendee doesn't exist or is not active for this event", 404);
         }
 
+        // $authenticatedUser = Auth::user();
+        // if ($authenticatedUser->id !== $attendeeId) {
+        //     Log::warning("Unauthorized access attempt for attendee ID $attendeeId in event ID $eventId");
+        //     return $this->error(null, "Unauthorized access", 403);
+        // }
+
         $authenticatedUser = Auth::user();
         if ($authenticatedUser->id !== $attendeeId) {
-            Log::warning("Unauthorized access attempt for attendee ID $attendeeId in event ID $eventId");
+            Log::warning("Unauthorized access attempt...");
             return $this->error(null, "Unauthorized access", 403);
         }
 
