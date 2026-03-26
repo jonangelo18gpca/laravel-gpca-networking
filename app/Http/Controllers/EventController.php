@@ -324,8 +324,9 @@ class EventController extends Controller
         ]);
         try {
             $event = Event::with(['eventLogoInverted', 'eventBanner', 'appSponsorLogo'])->where('id', $eventId)->where('category', $eventCategory)->first();
-            $attendee = Attendee::with('pfp')->where('id', $attendeeId)->where('event_id', $eventId)->first();
-            $attendeeNotificationsCount = AttendeeNotification::with('notification')->where('event_id', $eventId)->where('attendee_id', $attendeeId)->where('is_seen', false)->count();
+            // $attendee = Attendee::with('pfp')->where('id', $attendeeId)->where('event_id', $eventId)->first();
+            $attendee = auth()->user();
+            $attendeeNotificationsCount = AttendeeNotification::with('notification')->where('event_id', $eventId)->where('attendee_id', $attendee->id)->where('is_seen', false)->count();
 
 
 
@@ -383,8 +384,9 @@ class EventController extends Controller
                 Log::error('EVENT NOT FOUND', compact('eventId', 'eventCategory'));
                 return $this->error(null, "Event not found", 404);
             }
-            $attendee = Attendee::with('pfp')->where('id', $attendeeId)->where('event_id', $eventId)->first();
-            $attendeeNotificationsCount = AttendeeNotification::with('notification')->where('event_id', $eventId)->where('attendee_id', $attendeeId)->where('is_seen', false)->count();
+            // $attendee = Attendee::with('pfp')->where('id', $attendeeId)->where('event_id', $eventId)->first();
+            $attendee = auth()->user();
+            $attendeeNotificationsCount = AttendeeNotification::with('notification')->where('event_id', $eventId)->where('attendee_id', $attendee->id)->where('is_seen', false)->count();
 
             if ($eventCategory == "PC") {
                 $sponsorsBannerCarousel = [
@@ -967,7 +969,7 @@ class EventController extends Controller
 
     public function apiGetNotifications($eventCategory, $eventId, $attendeeId)
     {
-        $attendeeNotifications = AttendeeNotification::with('notification')->where('event_id', $eventId)->where('attendee_id', $attendeeId)->orderBy('sent_datetime', 'DESC')->get();
+        $attendeeNotifications = AttendeeNotification::with('notification')->where('event_id', $eventId)->where('attendee_id', $attendee->id)->orderBy('sent_datetime', 'DESC')->get();
 
         if ($attendeeNotifications->isEmpty()) {
             return [];
