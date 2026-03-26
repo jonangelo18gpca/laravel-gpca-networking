@@ -317,7 +317,9 @@ class EventController extends Controller
 
     public function apiEventHomepage($apiCode, $eventCategory, $eventId, $attendeeId)
     {
-Log::info('AUTH USER API Event Homepage', ['user' => auth()->user()]);
+
+
+Log::info('HOMEPAGE API HIT');
 
         try {
             $event = Event::with(['eventLogoInverted', 'eventBanner', 'appSponsorLogo'])->where('id', $eventId)->where('category', $eventCategory)->first();
@@ -374,7 +376,7 @@ Log::info('AUTH USER API Event Homepage', ['user' => auth()->user()]);
 
     public function apiEventHomepagev2($apiCode, $eventCategory, $eventId, $attendeeId)
     {
-
+Log::info('HOMEPAGEV2 API HIT');
 
         try {
             $event = Event::with(['eventBanner'])->where('id', $eventId)->where('category', $eventCategory)->first();
