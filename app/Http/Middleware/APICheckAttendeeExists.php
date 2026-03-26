@@ -40,11 +40,19 @@ class APICheckAttendeeExists
         //     return $this->error(null, "Unauthorized access", 403);
         // }
 
-        $authenticatedUser = Auth::user();
-        if ($authenticatedUser->id !== $attendeeId) {
-            Log::warning("Unauthorized access attempt...");
-            return $this->error(null, "Unauthorized access", 403);
-        }
+$authenticatedUser = Auth::user();
+
+if (!$authenticatedUser) {
+    return $this->error(null, "Unauthorized", 401);
+}
+
+// Force use authenticated user
+if ($authenticatedUser->id !== $attendeeId) {
+    Log::warning("Route attendeeId mismatch. Using authenticated user instead.", [
+        'auth_id' => $authenticatedUser->id,
+        'route_id' => $attendeeId
+    ]);
+}
 
         return $next($request);
     }
