@@ -254,6 +254,14 @@ class SessionController extends Controller
                         'url' => 'https://www.gpcaforum.com/wp-content/uploads/2025/12/GPCA-Sustainability-Pavilion-Agenda_7Dec.pdf'
                     ],
                 ];
+            } else if ($eventCategory == "RIC") {
+                $pdf = [
+                    [
+                        'title' => '19th Annual GPCA Forum Agenda (PDF)',
+                        'url' => 'http://gpcachem.org/wp-content/uploads/2026/03/8th-GPCA-RI-Conference-Agenda_25March.pdf'
+                    ],
+
+                ];
             } else {
                 $pdf = [];
             }
