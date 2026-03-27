@@ -188,15 +188,15 @@ class SessionController extends Controller
     public function apiEventSessions($apiCode, $eventCategory, $eventId, $attendeeId)
     {
         try {
-            $sessions = Session::with(['event', 'feature', 'sponsor.logo'])->where('event_id', $eventId)->where('is_active', true)->orderBy('session_date', 'ASC')->orderBy('start_time', 'ASC')->get();
+            $sessions = Session::with(['feature', 'sponsor.logo'])->where('event_id', $eventId)->where('is_active', true)->orderBy('session_date', 'ASC')->orderBy('start_time', 'ASC')->get();
 
             // if ($sessions->isEmpty()) {
             //     return $this->error(null, "No sessions available at the moment.", 404);
             // }
 
             if ($sessions->isEmpty()) {
-    return $this->success([], "No sessions available", 200);
-}
+                return $this->success([], "No sessions available", 200);
+            }
 
             $data = array();
 
@@ -292,23 +292,33 @@ class SessionController extends Controller
                         } else {
                             $sessionEndTime = $session->end_time;
                         }
-
+                        
                         $finalCategory = "";
                         if ($session->feature_id == 0) {
-                            $finalCategory = $session->event->short_name;
+                            $finalCategory = $session->event->short_name ?? '';
                         } else {
-                            $finalCategory = $session->feature->short_name;
+                            $finalCategory = $session->feature->short_name ?? '';
                         }
+                        // array_push($sessionsTemp, [
+                        //     'session_id' => $session->id,
+                        //     'start_time' => $session->start_time,
+                        //     'end_time' => $sessionEndTime,
+                        //     'title' => $session->title,
+                        //     'category' => $finalCategory,
+                        //     'location' => $session->location,
+                        //     'speakers_mini_headshot' => $getSpeakersHeadshot,
+                        //     'sponsor_mini_logo' => $session->sponsor->logo->file_url ?? null,
+                        // ]);
 
                         array_push($sessionsTemp, [
                             'session_id' => $session->id,
-                            'start_time' => $session->start_time,
-                            'end_time' => $sessionEndTime,
-                            'title' => $session->title,
-                            'category' => $finalCategory,
-                            'location' => $session->location,
-                            'speakers_mini_headshot' => $getSpeakersHeadshot,
-                            'sponsor_mini_logo' => $session->sponsor->logo->file_url ?? null,
+                            'start_time' => $session->start_time ?? '',
+                            'end_time' => $sessionEndTime ?? '',
+                            'title' => $session->title ?? '',
+                            'category' => $finalCategory ?? '',
+                            'location' => $session->location ?? '',
+                            'speakers_mini_headshot' => array_values(array_filter($getSpeakersHeadshot)),
+                            'sponsor_mini_logo' => $session->sponsor->logo->file_url ?? '',
                         ]);
                     }
                 }
@@ -537,7 +547,7 @@ class SessionController extends Controller
     public function apiEventSessionDetail($apiCode, $eventCategory, $eventId, $attendeeId, $sessionId)
     {
         try {
-            $session = Session::with(['event', 'feature', 'sponsor.logo'])->where('id', $sessionId)->where('event_id', $eventId)->where('is_active', true)->first();
+            $session = Session::with(['feature', 'sponsor.logo'])->where('id', $sessionId)->where('event_id', $eventId)->where('is_active', true)->first();
             $defaultBgColor = Event::where('id', $eventId)->value('primary_bg_color');
 
             if (!$session) {
@@ -601,9 +611,9 @@ class SessionController extends Controller
             $finalSessionDate = Carbon::parse($session->session_date)->format('F d, Y') . ' | ' . Carbon::parse($session->session_date)->format('l') . ' | ' . $session->session_day;
             $finalCategory = "";
             if ($session->feature_id == 0) {
-                $finalCategory = $session->event->short_name;
+                $finalCategory = $session->event->short_name ?? '';
             } else {
-                $finalCategory = $session->feature->short_name;
+                $finalCategory = $session->feature->short_name ?? '';
             }
 
             $data = [
