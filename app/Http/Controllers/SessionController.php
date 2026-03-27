@@ -262,7 +262,7 @@ class SessionController extends Controller
                 $pdf = [
                     [
                         'title' => '19th Annual GPCA Forum Agenda (PDF)',
-                        'url' => 'http://gpcachem.org/wp-content/uploads/2026/03/8th-GPCA-RI-Conference-Agenda_25March.pdf'
+                        'url' => 'https://gpcachem.org/wp-content/uploads/2026/03/8th-GPCA-RI-Conference-Agenda_25March.pdf'
                     ],
 
                 ];
