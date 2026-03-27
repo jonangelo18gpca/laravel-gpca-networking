@@ -188,7 +188,7 @@ class SessionController extends Controller
     public function apiEventSessions($apiCode, $eventCategory, $eventId, $attendeeId)
     {
         try {
-            $sessions = Session::with(['feature', 'sponsor.logo'])->where('event_id', $eventId)->where('is_active', true)->orderBy('session_date', 'ASC')->orderBy('start_time', 'ASC')->get();
+            $sessions = Session::with(['event', 'feature', 'sponsor.logo'])->where('event_id', $eventId)->where('is_active', true)->orderBy('session_date', 'ASC')->orderBy('start_time', 'ASC')->get();
 
             // if ($sessions->isEmpty()) {
             //     return $this->error(null, "No sessions available at the moment.", 404);
@@ -537,7 +537,7 @@ class SessionController extends Controller
     public function apiEventSessionDetail($apiCode, $eventCategory, $eventId, $attendeeId, $sessionId)
     {
         try {
-            $session = Session::with(['feature', 'sponsor.logo'])->where('id', $sessionId)->where('event_id', $eventId)->where('is_active', true)->first();
+            $session = Session::with(['event', 'feature', 'sponsor.logo'])->where('id', $sessionId)->where('event_id', $eventId)->where('is_active', true)->first();
             $defaultBgColor = Event::where('id', $eventId)->value('primary_bg_color');
 
             if (!$session) {
