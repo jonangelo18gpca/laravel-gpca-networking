@@ -393,7 +393,7 @@ Log::info('HOMEPAGEV2 API HIT');
                     "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/8.jpg",
                     "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/9.jpg",
                     "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/10.jpg"
-                ];
+                ];  
             } else if ($eventCategory == "SCC") {
                 $sponsorsBannerCarousel = [
                     "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/08/exhibitor1.jpg",
@@ -494,12 +494,12 @@ Log::info('HOMEPAGEV2 API HIT');
                 [
                     "image" => "https://www.gpcaforum.com/wp-content/uploads/2025/10/welcome_dinner-1.jpg",
                     "title" => "Welcome Dinner",
-                    "link" => "https://www.gpcaforum.com/networking/"
+                    "link" => "https://www.gpcaforum.com/wp-content/uploads/2026/02/NY4_1310-1-2048x1365.jpg"
                 ],
                 [
                     "image" => "https://www.gpcaforum.com/wp-content/uploads/2025/11/gala_dinner-v2.jpg",
                     "title" => "Gala Dinner",
-                    "link" => "https://www.gpcaforum.com/networking/"
+                    "link" => "https://www.gpcaforum.com/wp-content/uploads/2026/02/WIN02585-1-2048x1365.jpg"
                 ],
             ];
 
