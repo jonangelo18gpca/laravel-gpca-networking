@@ -14,16 +14,31 @@
                     </div>
                     <div class="mt-5">
                         <div class="text-primaryColor">
-                            Choose file <span class="text-red-500">*</span>
+                            Image URL or Media Library <span class="text-red-500">*</span>
                         </div>
                         <div class="mt-2">
+                            {{-- <div class="flex gap-5 items-center">
+                                <input wire:model.lazy="image_placeholder_text"
+                                    placeholder="Paste image URL, e.g. https://domain.com/logo.png" type="url"
+                                    class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
+                                @error('image_placeholder_text')
+                                    <div class="text-red-500 text-xs italic mt-1">
+                                        {{ $message }}
+                                    </div>
+                                @enderror --}}
+
+
                             <div class="flex gap-5 items-center">
-                                <input wire:model.lazy="image_placeholder_text" placeholder="test.jpg" type="text"
-                                    class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200"
-                                    disabled>
+                                <input wire:model.lazy="image_placeholder_text"
+                                    placeholder="Paste image URL, e.g. https://domain.com/logo.png" type="url"
+                                    class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
+
                                 <button type="button" wire:click.prevent="chooseImage"
-                                    class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-5 rounded items-center text-sm cursor-pointer">Choose</button>
+                                    class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-5 rounded items-center text-sm cursor-pointer">
+                                    Choose
+                                </button>
                             </div>
+
                             @error('image_placeholder_text')
                                 <div class="text-red-500 text-xs italic mt-1">
                                     {{ $message }}

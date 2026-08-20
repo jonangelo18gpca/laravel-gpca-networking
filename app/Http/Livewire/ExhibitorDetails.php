@@ -54,9 +54,16 @@ class ExhibitorDetails extends Component
 
     public function editExhibitorAssetConfirmation()
     {
+        // $this->validate([
+        //     'image_placeholder_text' => 'required'
+        // ]);
+
+
         $this->validate([
-            'image_placeholder_text' => 'required'
-        ]);
+    'image_media_id' => 'nullable|exists:medias,id',
+    'image_placeholder_text' => 'nullable|required_without:image_media_id|url|max:2048',
+]);
+
 
         $this->dispatchBrowserEvent('swal:confirmation', [
             'type' => 'warning',
@@ -67,74 +74,182 @@ class ExhibitorDetails extends Component
         ]);
     }
 
-    public function editExhibitorAsset()
-    {
-        if ($this->assetType == "Exhibitor logo") {
-            Exhibitors::where('id', $this->exhibitorData['exhibitorId'])->update([
-                'logo_media_id' => $this->image_media_id,
-            ]);
+    // public function editExhibitorAsset()
+    // {
+    //     if ($this->assetType == "Exhibitor logo") {
+    //         Exhibitors::where('id', $this->exhibitorData['exhibitorId'])->update([
+    //             'logo_media_id' => $this->image_media_id,
+    //         ]);
 
-            if ($this->exhibitorData['logo']['media_id'] != null) {
-                mediaUsageUpdate(
-                    MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
-                    $this->image_media_id,
-                    MediaEntityTypes::EXHIBITOR_LOGO->value,
-                    $this->exhibitorData['exhibitorId'],
-                    $this->exhibitorData['logo']['media_usage_id']
-                );
-            } else {
-                mediaUsageUpdate(
-                    MediaUsageUpdateTypes::ADD_ONLY->value,
-                    $this->image_media_id,
-                    MediaEntityTypes::EXHIBITOR_LOGO->value,
-                    $this->exhibitorData['exhibitorId'],
-                    $this->exhibitorData['logo']['media_usage_id']
-                );
-            }
+    //         if ($this->exhibitorData['logo']['media_id'] != null) {
+    //             mediaUsageUpdate(
+    //                 MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
+    //                 $this->image_media_id,
+    //                 MediaEntityTypes::EXHIBITOR_LOGO->value,
+    //                 $this->exhibitorData['exhibitorId'],
+    //                 $this->exhibitorData['logo']['media_usage_id']
+    //             );
+    //         } else {
+    //             mediaUsageUpdate(
+    //                 MediaUsageUpdateTypes::ADD_ONLY->value,
+    //                 $this->image_media_id,
+    //                 MediaEntityTypes::EXHIBITOR_LOGO->value,
+    //                 $this->exhibitorData['exhibitorId'],
+    //                 $this->exhibitorData['logo']['media_usage_id']
+    //             );
+    //         }
 
-            $this->exhibitorData['logo'] = [
-                'media_id' => $this->image_media_id,
-                'media_usage_id' => getMediaUsageId($this->image_media_id, MediaEntityTypes::EXHIBITOR_LOGO->value, $this->exhibitorData['exhibitorId']),
-                'url' => Medias::where('id', $this->image_media_id)->value('file_url'),
-            ];
-        } else {
-            Exhibitors::where('id', $this->exhibitorData['exhibitorId'])->update([
-                'banner_media_id' => $this->image_media_id,
-            ]);
+    //         $this->exhibitorData['logo'] = [
+    //             'media_id' => $this->image_media_id,
+    //             'media_usage_id' => getMediaUsageId($this->image_media_id, MediaEntityTypes::EXHIBITOR_LOGO->value, $this->exhibitorData['exhibitorId']),
+    //             'url' => Medias::where('id', $this->image_media_id)->value('file_url'),
+    //         ];
+    //     } else {
+    //         Exhibitors::where('id', $this->exhibitorData['exhibitorId'])->update([
+    //             'banner_media_id' => $this->image_media_id,
+    //         ]);
 
-            if ($this->exhibitorData['banner']['media_id'] != null) {
-                mediaUsageUpdate(
-                    MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
-                    $this->image_media_id,
-                    MediaEntityTypes::EXHIBITOR_BANNER->value,
-                    $this->exhibitorData['exhibitorId'],
-                    $this->exhibitorData['banner']['media_usage_id']
-                );
-            } else {
-                mediaUsageUpdate(
-                    MediaUsageUpdateTypes::ADD_ONLY->value,
-                    $this->image_media_id,
-                    MediaEntityTypes::EXHIBITOR_BANNER->value,
-                    $this->exhibitorData['exhibitorId'],
-                    $this->exhibitorData['banner']['media_usage_id']
-                );
-            }
+    //         if ($this->exhibitorData['banner']['media_id'] != null) {
+    //             mediaUsageUpdate(
+    //                 MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
+    //                 $this->image_media_id,
+    //                 MediaEntityTypes::EXHIBITOR_BANNER->value,
+    //                 $this->exhibitorData['exhibitorId'],
+    //                 $this->exhibitorData['banner']['media_usage_id']
+    //             );
+    //         } else {
+    //             mediaUsageUpdate(
+    //                 MediaUsageUpdateTypes::ADD_ONLY->value,
+    //                 $this->image_media_id,
+    //                 MediaEntityTypes::EXHIBITOR_BANNER->value,
+    //                 $this->exhibitorData['exhibitorId'],
+    //                 $this->exhibitorData['banner']['media_usage_id']
+    //             );
+    //         }
 
-            $this->exhibitorData['banner'] = [
-                'media_id' => $this->image_media_id,
-                'media_usage_id' => getMediaUsageId($this->image_media_id, MediaEntityTypes::EXHIBITOR_BANNER->value, $this->exhibitorData['exhibitorId']),
-                'url' => Medias::where('id', $this->image_media_id)->value('file_url'),
-            ];
-        }
+    //         $this->exhibitorData['banner'] = [
+    //             'media_id' => $this->image_media_id,
+    //             'media_usage_id' => getMediaUsageId($this->image_media_id, MediaEntityTypes::EXHIBITOR_BANNER->value, $this->exhibitorData['exhibitorId']),
+    //             'url' => Medias::where('id', $this->image_media_id)->value('file_url'),
+    //         ];
+    //     }
 
-        $this->dispatchBrowserEvent('swal:success', [
-            'type' => 'success',
-            'message' => $this->assetType . ' updated succesfully!',
-            'text' => "",
+    //     $this->dispatchBrowserEvent('swal:success', [
+    //         'type' => 'success',
+    //         'message' => $this->assetType . ' updated succesfully!',
+    //         'text' => "",
+    //     ]);
+
+    //     $this->resetEditExhibitorAssetFields();
+    // }
+
+public function editExhibitorAsset()
+{
+    $mediaId = $this->image_media_id;
+
+    if (!$mediaId && !empty($this->image_placeholder_text)) {
+        $imageUrl = trim($this->image_placeholder_text);
+
+        $path = parse_url($imageUrl, PHP_URL_PATH);
+        $fileName = basename($path) ?: 'exhibitor-image';
+        $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+        $media = Medias::create([
+            'file_url' => $imageUrl,
+            'file_directory' => 'external-url',
+            'file_name' => $fileName,
+            'file_type' => $extension ?: 'image',
+            'file_size' => 0,
+            'width' => 0,
+            'height' => 0,
+            'date_uploaded' => now(),
         ]);
 
-        $this->resetEditExhibitorAssetFields();
+        $mediaId = $media->id;
     }
+
+    if (!$mediaId) {
+        $this->addError(
+            'image_placeholder_text',
+            'Please choose an image or provide a valid image URL.'
+        );
+
+        return;
+    }
+
+    if ($this->assetType === 'Exhibitor logo') {
+        Exhibitors::where('id', $this->exhibitorData['exhibitorId'])->update([
+            'logo_media_id' => $mediaId,
+        ]);
+
+        if (!empty($this->exhibitorData['logo']['media_id'])) {
+            mediaUsageUpdate(
+                MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
+                $mediaId,
+                MediaEntityTypes::EXHIBITOR_LOGO->value,
+                $this->exhibitorData['exhibitorId'],
+                $this->exhibitorData['logo']['media_usage_id']
+            );
+        } else {
+            mediaUsageUpdate(
+                MediaUsageUpdateTypes::ADD_ONLY->value,
+                $mediaId,
+                MediaEntityTypes::EXHIBITOR_LOGO->value,
+                $this->exhibitorData['exhibitorId']
+            );
+        }
+
+        $this->exhibitorData['logo'] = [
+            'media_id' => $mediaId,
+            'media_usage_id' => getMediaUsageId(
+                $mediaId,
+                MediaEntityTypes::EXHIBITOR_LOGO->value,
+                $this->exhibitorData['exhibitorId']
+            ),
+            'url' => Medias::where('id', $mediaId)->value('file_url'),
+        ];
+    } else {
+        Exhibitors::where('id', $this->exhibitorData['exhibitorId'])->update([
+            'banner_media_id' => $mediaId,
+        ]);
+
+        if (!empty($this->exhibitorData['banner']['media_id'])) {
+            mediaUsageUpdate(
+                MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
+                $mediaId,
+                MediaEntityTypes::EXHIBITOR_BANNER->value,
+                $this->exhibitorData['exhibitorId'],
+                $this->exhibitorData['banner']['media_usage_id']
+            );
+        } else {
+            mediaUsageUpdate(
+                MediaUsageUpdateTypes::ADD_ONLY->value,
+                $mediaId,
+                MediaEntityTypes::EXHIBITOR_BANNER->value,
+                $this->exhibitorData['exhibitorId']
+            );
+        }
+
+        $this->exhibitorData['banner'] = [
+            'media_id' => $mediaId,
+            'media_usage_id' => getMediaUsageId(
+                $mediaId,
+                MediaEntityTypes::EXHIBITOR_BANNER->value,
+                $this->exhibitorData['exhibitorId']
+            ),
+            'url' => Medias::where('id', $mediaId)->value('file_url'),
+        ];
+    }
+
+    $this->dispatchBrowserEvent('swal:success', [
+        'type' => 'success',
+        'message' => $this->assetType . ' updated successfully!',
+        'text' => '',
+    ]);
+
+    $this->resetEditExhibitorAssetFields();
+}
+
 
     // FOR CHOOSING IMAGE MODAL
     public function chooseImage()
@@ -155,7 +270,8 @@ class ExhibitorDetails extends Component
     public function selectChooseImage()
     {
         $this->image_media_id = $this->activeSelectedImage['id'];
-        $this->image_placeholder_text = $this->activeSelectedImage['file_name'];
+        // $this->image_placeholder_text = $this->activeSelectedImage['file_name'];
+        $this->image_placeholder_text = $this->activeSelectedImage['file_url'];
         $this->activeSelectedImage = null;
         $this->chooseImageModal = false;
     }

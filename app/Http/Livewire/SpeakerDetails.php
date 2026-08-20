@@ -222,9 +222,13 @@ class SpeakerDetails extends Component
     public function editSpeakerAssetConfirmation()
     {
 
+        // $this->validate([
+        //     'image_placeholder_text' => 'required'
+        // ]);
+
         $this->validate([
-            'image_placeholder_text' => 'required'
-        ]);
+    'image_placeholder_text' => 'required|url|max:2048',
+]);
 
         $this->dispatchBrowserEvent('swal:confirmation', [
             'type' => 'warning',
@@ -237,15 +241,40 @@ class SpeakerDetails extends Component
 
     public function editSpeakerAsset()
     {
+
+        $mediaId = $this->image_media_id;
+
+    if (!$mediaId && !empty($this->image_placeholder_text)) {
+        $imageUrl = trim($this->image_placeholder_text);
+
+        $path = parse_url($imageUrl, PHP_URL_PATH);
+        $fileName = basename($path) ?: 'speaker-image';
+        $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+        $media = Medias::create([
+            'file_url' => $imageUrl,
+            'file_directory' => 'external-url',
+            'file_name' => $fileName,
+            'file_type' => $extension ?: 'image',
+            'file_size' => 0,
+            'width' => null,
+            'height' => null,
+            'date_uploaded' => now(),
+        ]);
+
+        $mediaId = $media->id;
+    }
+
+
         if ($this->assetType == "Speaker PFP") {
             Speakers::where('id', $this->speakerData['id'])->update([
-                'pfp_media_id' => $this->image_media_id,
+                'pfp_media_id' =>$mediaId,
             ]);
 
             if ($this->speakerData['pfp']['media_id'] != null) {
                 mediaUsageUpdate(
                     MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
-                    $this->image_media_id,
+                  $mediaId,
                     MediaEntityTypes::SPEAKER_PFP->value,
                     $this->speakerData['id'],
                     $this->speakerData['pfp']['media_usage_id']
@@ -253,7 +282,7 @@ class SpeakerDetails extends Component
             } else {
                 mediaUsageUpdate(
                     MediaUsageUpdateTypes::ADD_ONLY->value,
-                    $this->image_media_id,
+                    $mediaId,
                     MediaEntityTypes::SPEAKER_PFP->value,
                     $this->speakerData['id'],
                     $this->speakerData['pfp']['media_usage_id']
@@ -261,19 +290,19 @@ class SpeakerDetails extends Component
             }
             
             $this->speakerData['pfp'] = [
-                'media_id' => $this->image_media_id,
-                'media_usage_id' => getMediaUsageId($this->image_media_id, MediaEntityTypes::SPEAKER_PFP->value, $this->speakerData['id']),
-                'url' => Medias::where('id', $this->image_media_id)->value('file_url'),
+                'media_id' => $mediaId,
+                'media_usage_id' => getMediaUsageId($mediaId, MediaEntityTypes::SPEAKER_PFP->value, $this->speakerData['id']),
+                'url' => Medias::where('id', $mediaId)->value('file_url'),
             ];
         } else {
             Speakers::where('id', $this->speakerData['id'])->update([
-                'cover_photo_media_id' => $this->image_media_id,
+                'cover_photo_media_id' => $mediaId,
             ]);
 
             if ($this->speakerData['cover_photo']['media_id'] != null) {
                 mediaUsageUpdate(
                     MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
-                    $this->image_media_id,
+                    $mediaId,
                     MediaEntityTypes::SPEAKER_COVER_PHOTO->value,
                     $this->speakerData['id'],
                     $this->speakerData['cover_photo']['media_usage_id']
@@ -281,7 +310,7 @@ class SpeakerDetails extends Component
             } else {
                 mediaUsageUpdate(
                     MediaUsageUpdateTypes::ADD_ONLY->value,
-                    $this->image_media_id,
+                    $mediaId,
                     MediaEntityTypes::SPEAKER_COVER_PHOTO->value,
                     $this->speakerData['id'],
                     $this->speakerData['cover_photo']['media_usage_id']
@@ -289,9 +318,9 @@ class SpeakerDetails extends Component
             }
             
             $this->speakerData['cover_photo'] = [
-                'media_id' => $this->image_media_id,
-                'media_usage_id' => getMediaUsageId($this->image_media_id, MediaEntityTypes::SPEAKER_COVER_PHOTO->value, $this->speakerData['id']),
-                'url' => Medias::where('id', $this->image_media_id)->value('file_url'),
+                'media_id' => $mediaId,
+                'media_usage_id' => getMediaUsageId($mediaId, MediaEntityTypes::SPEAKER_COVER_PHOTO->value, $this->speakerData['id']),
+                'url' => Medias::where('id', $mediaId)->value('file_url'),
             ];
         }
 
@@ -324,7 +353,8 @@ class SpeakerDetails extends Component
     public function selectChooseImage()
     {
         $this->image_media_id = $this->activeSelectedImage['id'];
-        $this->image_placeholder_text = $this->activeSelectedImage['file_name'];
+        // $this->image_placeholder_text = $this->activeSelectedImage['file_name'];
+        $this->image_placeholder_text = $this->activeSelectedImage['file_url'];
         $this->activeSelectedImage = null;
         $this->chooseImageModal = false;
     }

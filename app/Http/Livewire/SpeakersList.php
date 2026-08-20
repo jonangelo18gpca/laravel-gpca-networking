@@ -45,7 +45,7 @@ class SpeakersList extends Component
 
         $this->addSpeakerForm = false;
         $this->editSpeakerDateTimeForm = false;
-        
+
         $this->mediaFileList = getMediaFileList();
         $this->chooseImageModal = false;
 
@@ -200,6 +200,7 @@ class SpeakersList extends Component
             'last_name' => 'required',
             'category' => 'required',
             'type' => 'required',
+            'image_placeholder_text' => 'nullable|url|max:2048', //jon
         ]);
 
         $this->dispatchBrowserEvent('swal:confirmation', [
@@ -213,6 +214,32 @@ class SpeakersList extends Component
 
     public function addSpeaker()
     {
+
+        //jon
+        $pfpMediaId = $this->image_media_id;
+
+        if (!$pfpMediaId && !empty($this->image_placeholder_text)) {
+            $imageUrl = trim($this->image_placeholder_text);
+
+            $path = parse_url($imageUrl, PHP_URL_PATH);
+            $fileName = basename($path) ?: 'speaker-image';
+            $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+            $media = Medias::create([
+                'file_url' => $imageUrl,
+                'file_directory' => 'external-url',
+                'file_name' => $fileName,
+                'file_type' => $extension ?: 'image',
+                // 'file_size' => null,
+                  'file_size' => 0,
+                'width' => null,
+                'height' => null,
+                'date_uploaded' => Carbon::now(),
+            ]);
+
+            $pfpMediaId = $media->id;
+        } //jon 
+
         $newSpeaker = Speakers::create([
             'event_id' => $this->event->id,
             'feature_id' => $this->category,
@@ -226,7 +253,8 @@ class SpeakersList extends Component
             'company_name' => $this->company_name,
             'job_title' => $this->job_title,
 
-            'pfp_media_id' => $this->image_media_id ?? null,
+            // 'pfp_media_id' => $this->image_media_id ?? null, - jon
+            'pfp_media_id' => $pfpMediaId,
 
             'datetime_added' => Carbon::now(),
         ]);
@@ -243,10 +271,21 @@ class SpeakersList extends Component
             }
         }
 
-        if($this->image_media_id){
+        // if ($this->image_media_id) {
+        //     mediaUsageUpdate(
+        //         MediaUsageUpdateTypes::ADD_ONLY->value,
+        //         $this->image_media_id,
+        //         MediaEntityTypes::SPEAKER_PFP->value,
+        //         $newSpeaker->id,
+        //     );
+        // } - jon
+
+
+
+        if ($pfpMediaId) {
             mediaUsageUpdate(
                 MediaUsageUpdateTypes::ADD_ONLY->value,
-                $this->image_media_id,
+                $pfpMediaId,
                 MediaEntityTypes::SPEAKER_PFP->value,
                 $newSpeaker->id,
             );
@@ -254,7 +293,8 @@ class SpeakersList extends Component
 
         array_push($this->finalListOfSpeakers, [
             'id' => $newSpeaker->id,
-            'pfp' => $this->image_media_id ? Medias::where('id', $this->image_media_id)->value('file_url') : null,
+            // 'pfp' => $this->image_media_id ? Medias::where('id', $this->image_media_id)->value('file_url') : null,  - //jon
+           'pfp' => $pfpMediaId ? Medias::where('id', $pfpMediaId)->value('file_url') : null, //jon
             'name' => $this->salutation . ' ' . $this->first_name . ' ' . $this->middle_name . ' ' . $this->last_name,
             'category' => $selectedCategory,
             'type' => $selectedType,
@@ -273,7 +313,7 @@ class SpeakersList extends Component
         ]);
     }
 
-    
+
 
     // FOR CHOOSING IMAGE MODAL
     public function chooseImage()
@@ -294,7 +334,8 @@ class SpeakersList extends Component
     public function selectChooseImage()
     {
         $this->image_media_id = $this->activeSelectedImage['id'];
-        $this->image_placeholder_text = $this->activeSelectedImage['file_name'];
+        // $this->image_placeholder_text = $this->activeSelectedImage['file_name']; - jon
+        $this->image_placeholder_text = $this->activeSelectedImage['file_url'];
         $this->activeSelectedImage = null;
         $this->chooseImageModal = false;
     }
@@ -319,11 +360,11 @@ class SpeakersList extends Component
         $this->finalListOfSpeakers[$arrayIndex]['is_active'] = !$this->finalListOfSpeakers[$arrayIndex]['is_active'];
     }
 
-    
 
-    
 
-    
+
+
+
 
     public function deleteSpeakerConfirmation($index)
     {
@@ -341,8 +382,8 @@ class SpeakersList extends Component
     {
         $speaker = Speakers::where('id', $this->finalListOfSpeakers[$this->activeDeleteIndex]['id'])->first();
 
-        if($speaker){
-            if($speaker->pfp_media_id){
+        if ($speaker) {
+            if ($speaker->pfp_media_id) {
                 mediaUsageUpdate(
                     MediaUsageUpdateTypes::REMOVED_ONLY->value,
                     $speaker->pfp_media_id,
@@ -352,7 +393,7 @@ class SpeakersList extends Component
                 );
             }
 
-            if($speaker->cover_photo_media_id){
+            if ($speaker->cover_photo_media_id) {
                 mediaUsageUpdate(
                     MediaUsageUpdateTypes::REMOVED_ONLY->value,
                     $speaker->cover_photo_media_id,
@@ -367,7 +408,7 @@ class SpeakersList extends Component
             unset($this->finalListOfSpeakers[$this->activeDeleteIndex]);
             $this->finalListOfSpeakers = array_values($this->finalListOfSpeakers);
         }
-        
+
         $this->dispatchBrowserEvent('swal:success', [
             'type' => 'success',
             'message' => 'Speaker deleted successfully!',

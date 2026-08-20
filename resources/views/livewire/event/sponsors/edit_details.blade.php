@@ -114,7 +114,7 @@
                                 Mobile number
                             </div>
                             <div>
-                                <input placeholder="xxxxxxxxxx" type="texxt" wire:model.lazy="mobile_number"
+                                <input placeholder="xxxxxxxxxx" type="text" wire:model.lazy="mobile_number"
                                     class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
                             </div>
                         </div>

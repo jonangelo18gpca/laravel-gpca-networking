@@ -19,13 +19,15 @@
                                 Category <span class="text-red-500">*</span>
                             </div>
                             <div class="mt-2">
-                                <select wire:model.lazy="category" class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
+                                <select wire:model.lazy="category"
+                                    class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
                                     <option value=""></option>
                                     @foreach ($categoryChoices as $categoryChoice)
-                                        <option value="{{ $categoryChoice['id'] }}">{{ $categoryChoice['value'] }}</option>
+                                        <option value="{{ $categoryChoice['id'] }}">{{ $categoryChoice['value'] }}
+                                        </option>
                                     @endforeach
                                 </select>
-    
+
                                 @error('category')
                                     <div class="text-red-500 text-xs italic mt-1">
                                         {{ $message }}
@@ -34,19 +36,20 @@
                             </div>
                         </div>
 
-                        
+
                         <div>
                             <div class="text-primaryColor">
                                 Type <span class="text-red-500">*</span>
                             </div>
                             <div class="mt-2">
-                                <select wire:model.lazy="type" class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
+                                <select wire:model.lazy="type"
+                                    class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
                                     <option value=""></option>
                                     @foreach ($typeChoices as $typeChoice)
                                         <option value="{{ $typeChoice['id'] }}">{{ $typeChoice['value'] }}</option>
                                     @endforeach
                                 </select>
-    
+
                                 @error('type')
                                     <div class="text-red-500 text-xs italic mt-1">
                                         {{ $message }}
@@ -72,7 +75,7 @@
                             </div>
                         </div>
 
-                        
+
                         <div>
                             <div class="text-primaryColor">
                                 First name <span class="text-red-500">*</span>
@@ -80,7 +83,7 @@
                             <div class="mt-2">
                                 <input placeholder="First name" type="text" wire:model.lazy="first_name"
                                     class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
-                
+
                                 @error('first_name')
                                     <div class="text-red-500 text-xs italic mt-1">
                                         {{ $message }}
@@ -102,7 +105,7 @@
                             </div>
                         </div>
 
-                        
+
                         <div>
                             <div class="text-primaryColor">
                                 Last name <span class="text-red-500">*</span>
@@ -110,7 +113,7 @@
                             <div class="mt-2">
                                 <input placeholder="Last name" type="text" wire:model.lazy="last_name"
                                     class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
-                
+
                                 @error('last_name')
                                     <div class="text-red-500 text-xs italic mt-1">
                                         {{ $message }}
@@ -120,7 +123,7 @@
                         </div>
                     </div>
 
-                    
+
 
                     <div class="mt-5 grid grid-cols-2 gap-x-5">
                         <div>
@@ -130,7 +133,7 @@
                             <div class="mt-2">
                                 <input placeholder="Company name" type="text" wire:model.lazy="company_name"
                                     class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
-                
+
                                 @error('company_name')
                                     <div class="text-red-500 text-xs italic mt-1">
                                         {{ $message }}
@@ -139,7 +142,7 @@
                             </div>
                         </div>
 
-                        
+
                         <div>
                             <div class="text-primaryColor">
                                 Job title
@@ -147,7 +150,7 @@
                             <div class="mt-2">
                                 <input placeholder="Job title" type="text" wire:model.lazy="job_title"
                                     class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
-                
+
                                 @error('job_title')
                                     <div class="text-red-500 text-xs italic mt-1">
                                         {{ $message }}
@@ -159,17 +162,23 @@
 
 
 
-
                     <div class="mt-5">
                         <div>
-                            <div class="text-primaryColor">
-                                PFP
-                            </div>
+                  <div class="text-primaryColor">
+    PFP <span class="text-xs text-gray-500">(Paste URL or choose from Media Library)</span>
+</div>
                             <div class="mt-2">
                                 <div class="flex gap-5 items-center">
-                                    <input wire:model.lazy="image_placeholder_text" placeholder="test.jpg" type="text"
+                                    {{-- <input wire:model.lazy="image_placeholder_text" placeholder="test.jpg" type="text"
                                         class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200"
                                         disabled>
+                                         --}}
+
+                                    <input wire:model.lazy="image_placeholder_text"
+                                        placeholder="Paste image URL, e.g. https://domain.com/photo.jpg"
+                                        type="url"
+                                        class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
+
                                     <button type="button" wire:click.prevent="chooseImage"
                                         class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-5 rounded items-center text-sm cursor-pointer">Choose</button>
                                 </div>

@@ -58,9 +58,15 @@ class MeetingRoomPartnerDetails extends Component
     public function editMeetingRoomPartnerAssetConfirmation()
     {
         
+        // $this->validate([
+        //     'image_placeholder_text' => 'required'
+        // ]);
+
+
         $this->validate([
-            'image_placeholder_text' => 'required'
-        ]);
+    'image_media_id' => 'nullable|exists:medias,id',
+    'image_placeholder_text' => 'nullable|required_without:image_media_id|url|max:2048',
+]);
 
         $this->dispatchBrowserEvent('swal:confirmation', [
             'type' => 'warning',
@@ -71,75 +77,188 @@ class MeetingRoomPartnerDetails extends Component
         ]);
     }
 
+    // public function editMeetingRoomPartnerAsset()
+    // {
+    //     if ($this->assetType == "Meeting room partner logo") {
+    //         MeetingRoomPartners::where('id', $this->meetingRoomPartnerData['meetingRoomPartnerId'])->update([
+    //             'logo_media_id' => $this->image_media_id,
+    //         ]);
+
+    //         if ($this->meetingRoomPartnerData['logo']['media_id'] != null) {
+    //             mediaUsageUpdate(
+    //                 MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
+    //                 $this->image_media_id,
+    //                 MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value,
+    //                 $this->meetingRoomPartnerData['meetingRoomPartnerId'],
+    //                 $this->meetingRoomPartnerData['logo']['media_usage_id']
+    //             );
+    //         } else {
+    //             mediaUsageUpdate(
+    //                 MediaUsageUpdateTypes::ADD_ONLY->value,
+    //                 $this->image_media_id,
+    //                 MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value,
+    //                 $this->meetingRoomPartnerData['meetingRoomPartnerId'],
+    //                 $this->meetingRoomPartnerData['logo']['media_usage_id']
+    //             );
+    //         }
+
+    //         $this->meetingRoomPartnerData['logo'] = [
+    //             'media_id' => $this->image_media_id,
+    //             'media_usage_id' => getMediaUsageId($this->image_media_id, MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value, $this->meetingRoomPartnerData['meetingRoomPartnerId']),
+    //             'url' => Medias::where('id', $this->image_media_id)->value('file_url'),
+    //         ];
+    //     } else {
+    //         MeetingRoomPartners::where('id', $this->meetingRoomPartnerData['meetingRoomPartnerId'])->update([
+    //             'banner_media_id' => $this->image_media_id,
+    //         ]);
+
+    //         if ($this->meetingRoomPartnerData['banner']['media_id'] != null) {
+    //             mediaUsageUpdate(
+    //                 MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
+    //                 $this->image_media_id,
+    //                 MediaEntityTypes::MEETING_ROOM_PARTNER_BANNER->value,
+    //                 $this->meetingRoomPartnerData['meetingRoomPartnerId'],
+    //                 $this->meetingRoomPartnerData['banner']['media_usage_id']
+    //             );
+    //         } else {
+    //             mediaUsageUpdate(
+    //                 MediaUsageUpdateTypes::ADD_ONLY->value,
+    //                 $this->image_media_id,
+    //                 MediaEntityTypes::MEETING_ROOM_PARTNER_BANNER->value,
+    //                 $this->meetingRoomPartnerData['meetingRoomPartnerId'],
+    //                 $this->meetingRoomPartnerData['banner']['media_usage_id']
+    //             );
+    //         }
+
+    //         $this->meetingRoomPartnerData['banner'] = [
+    //             'media_id' => $this->image_media_id,
+    //             'media_usage_id' => getMediaUsageId($this->image_media_id, MediaEntityTypes::MEETING_ROOM_PARTNER_BANNER->value, $this->meetingRoomPartnerData['meetingRoomPartnerId']),
+    //             'url' => Medias::where('id', $this->image_media_id)->value('file_url'),
+    //         ];
+    //     }
+
+    //     $this->dispatchBrowserEvent('swal:success', [
+    //         'type' => 'success',
+    //         'message' => $this->assetType . ' updated succesfully!',
+    //         'text' => "",
+    //     ]);
+
+    //     $this->resetEditMeetingRoomPartnerAssetFields();
+    // }
+    
+
     public function editMeetingRoomPartnerAsset()
-    {
-        if ($this->assetType == "Meeting room partner logo") {
-            MeetingRoomPartners::where('id', $this->meetingRoomPartnerData['meetingRoomPartnerId'])->update([
-                'logo_media_id' => $this->image_media_id,
-            ]);
+{
+    $mediaId = $this->image_media_id;
 
-            if ($this->meetingRoomPartnerData['logo']['media_id'] != null) {
-                mediaUsageUpdate(
-                    MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
-                    $this->image_media_id,
-                    MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value,
-                    $this->meetingRoomPartnerData['meetingRoomPartnerId'],
-                    $this->meetingRoomPartnerData['logo']['media_usage_id']
-                );
-            } else {
-                mediaUsageUpdate(
-                    MediaUsageUpdateTypes::ADD_ONLY->value,
-                    $this->image_media_id,
-                    MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value,
-                    $this->meetingRoomPartnerData['meetingRoomPartnerId'],
-                    $this->meetingRoomPartnerData['logo']['media_usage_id']
-                );
-            }
+    if (!$mediaId && !empty($this->image_placeholder_text)) {
+        $imageUrl = trim($this->image_placeholder_text);
 
-            $this->meetingRoomPartnerData['logo'] = [
-                'media_id' => $this->image_media_id,
-                'media_usage_id' => getMediaUsageId($this->image_media_id, MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value, $this->meetingRoomPartnerData['meetingRoomPartnerId']),
-                'url' => Medias::where('id', $this->image_media_id)->value('file_url'),
-            ];
-        } else {
-            MeetingRoomPartners::where('id', $this->meetingRoomPartnerData['meetingRoomPartnerId'])->update([
-                'banner_media_id' => $this->image_media_id,
-            ]);
+        $path = parse_url($imageUrl, PHP_URL_PATH);
+        $fileName = basename($path) ?: 'meeting-room-partner-image';
+        $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 
-            if ($this->meetingRoomPartnerData['banner']['media_id'] != null) {
-                mediaUsageUpdate(
-                    MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
-                    $this->image_media_id,
-                    MediaEntityTypes::MEETING_ROOM_PARTNER_BANNER->value,
-                    $this->meetingRoomPartnerData['meetingRoomPartnerId'],
-                    $this->meetingRoomPartnerData['banner']['media_usage_id']
-                );
-            } else {
-                mediaUsageUpdate(
-                    MediaUsageUpdateTypes::ADD_ONLY->value,
-                    $this->image_media_id,
-                    MediaEntityTypes::MEETING_ROOM_PARTNER_BANNER->value,
-                    $this->meetingRoomPartnerData['meetingRoomPartnerId'],
-                    $this->meetingRoomPartnerData['banner']['media_usage_id']
-                );
-            }
-
-            $this->meetingRoomPartnerData['banner'] = [
-                'media_id' => $this->image_media_id,
-                'media_usage_id' => getMediaUsageId($this->image_media_id, MediaEntityTypes::MEETING_ROOM_PARTNER_BANNER->value, $this->meetingRoomPartnerData['meetingRoomPartnerId']),
-                'url' => Medias::where('id', $this->image_media_id)->value('file_url'),
-            ];
-        }
-
-        $this->dispatchBrowserEvent('swal:success', [
-            'type' => 'success',
-            'message' => $this->assetType . ' updated succesfully!',
-            'text' => "",
+        $media = Medias::create([
+            'file_url' => $imageUrl,
+            'file_directory' => 'external-url',
+            'file_name' => $fileName,
+            'file_type' => $extension ?: 'image',
+            'file_size' => 0,
+            'width' => 0,
+            'height' => 0,
+            'date_uploaded' => now(),
         ]);
 
-        $this->resetEditMeetingRoomPartnerAssetFields();
+        $mediaId = $media->id;
     }
-    
+
+    if (!$mediaId) {
+        $this->addError(
+            'image_placeholder_text',
+            'Please choose an image or provide a valid image URL.'
+        );
+
+        return;
+    }
+
+    if ($this->assetType === 'Meeting room partner logo') {
+        MeetingRoomPartners::where(
+            'id',
+            $this->meetingRoomPartnerData['meetingRoomPartnerId']
+        )->update([
+            'logo_media_id' => $mediaId,
+        ]);
+
+        if (!empty($this->meetingRoomPartnerData['logo']['media_id'])) {
+            mediaUsageUpdate(
+                MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
+                $mediaId,
+                MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value,
+                $this->meetingRoomPartnerData['meetingRoomPartnerId'],
+                $this->meetingRoomPartnerData['logo']['media_usage_id']
+            );
+        } else {
+            mediaUsageUpdate(
+                MediaUsageUpdateTypes::ADD_ONLY->value,
+                $mediaId,
+                MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value,
+                $this->meetingRoomPartnerData['meetingRoomPartnerId']
+            );
+        }
+
+        $this->meetingRoomPartnerData['logo'] = [
+            'media_id' => $mediaId,
+            'media_usage_id' => getMediaUsageId(
+                $mediaId,
+                MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value,
+                $this->meetingRoomPartnerData['meetingRoomPartnerId']
+            ),
+            'url' => Medias::where('id', $mediaId)->value('file_url'),
+        ];
+    } else {
+        MeetingRoomPartners::where(
+            'id',
+            $this->meetingRoomPartnerData['meetingRoomPartnerId']
+        )->update([
+            'banner_media_id' => $mediaId,
+        ]);
+
+        if (!empty($this->meetingRoomPartnerData['banner']['media_id'])) {
+            mediaUsageUpdate(
+                MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
+                $mediaId,
+                MediaEntityTypes::MEETING_ROOM_PARTNER_BANNER->value,
+                $this->meetingRoomPartnerData['meetingRoomPartnerId'],
+                $this->meetingRoomPartnerData['banner']['media_usage_id']
+            );
+        } else {
+            mediaUsageUpdate(
+                MediaUsageUpdateTypes::ADD_ONLY->value,
+                $mediaId,
+                MediaEntityTypes::MEETING_ROOM_PARTNER_BANNER->value,
+                $this->meetingRoomPartnerData['meetingRoomPartnerId']
+            );
+        }
+
+        $this->meetingRoomPartnerData['banner'] = [
+            'media_id' => $mediaId,
+            'media_usage_id' => getMediaUsageId(
+                $mediaId,
+                MediaEntityTypes::MEETING_ROOM_PARTNER_BANNER->value,
+                $this->meetingRoomPartnerData['meetingRoomPartnerId']
+            ),
+            'url' => Medias::where('id', $mediaId)->value('file_url'),
+        ];
+    }
+
+    $this->dispatchBrowserEvent('swal:success', [
+        'type' => 'success',
+        'message' => $this->assetType . ' updated successfully!',
+        'text' => '',
+    ]);
+
+    $this->resetEditMeetingRoomPartnerAssetFields();
+}
     // FOR CHOOSING IMAGE MODAL
     public function chooseImage()
     {
@@ -159,7 +278,8 @@ class MeetingRoomPartnerDetails extends Component
     public function selectChooseImage()
     {
         $this->image_media_id = $this->activeSelectedImage['id'];
-        $this->image_placeholder_text = $this->activeSelectedImage['file_name'];
+        // $this->image_placeholder_text = $this->activeSelectedImage['file_name'];
+        $this->image_placeholder_text = $this->activeSelectedImage['file_url'];
         $this->activeSelectedImage = null;
         $this->chooseImageModal = false;
     }

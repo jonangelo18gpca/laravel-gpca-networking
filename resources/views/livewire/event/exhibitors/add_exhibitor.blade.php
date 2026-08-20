@@ -21,7 +21,7 @@
                             <div class="mt-2">
                                 <input placeholder="Name" type="text" wire:model.lazy="name"
                                     class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
-                
+
                                 @error('name')
                                     <div class="text-red-500 text-xs italic mt-1">
                                         {{ $message }}
@@ -40,7 +40,7 @@
                             <div class="mt-2">
                                 <input placeholder="Website" type="text" wire:model.lazy="website"
                                     class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
-                
+
                                 @error('website')
                                     <div class="text-red-500 text-xs italic mt-1">
                                         {{ $message }}
@@ -59,7 +59,7 @@
                             <div class="mt-2">
                                 <input placeholder="Stand No." type="text" wire:model.lazy="stand_number"
                                     class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
-                
+
                                 @error('stand_number')
                                     <div class="text-red-500 text-xs italic mt-1">
                                         {{ $message }}
@@ -74,12 +74,15 @@
                         <div>
                             <div class="text-primaryColor">
                                 Logo
+                                <span class="text-xs text-gray-500">
+                                    (Paste URL or choose from Media Library)
+                                </span>
                             </div>
                             <div class="mt-2">
                                 <div class="flex gap-5 items-center">
-                                    <input wire:model.lazy="image_placeholder_text" placeholder="test.jpg" type="text"
-                                        class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200"
-                                        disabled>
+                                    <input wire:model.lazy="image_placeholder_text"
+                                        placeholder="Paste image URL, e.g. https://domain.com/logo.png" type="url"
+                                        class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
                                     <button type="button" wire:click.prevent="chooseImage"
                                         class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-5 rounded items-center text-sm cursor-pointer">Choose</button>
                                 </div>

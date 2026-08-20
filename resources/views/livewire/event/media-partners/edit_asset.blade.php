@@ -12,7 +12,7 @@
                     <div class="text-primaryColor italic font-bold text-xl">
                         Edit {{ $assetType }}
                     </div>
-                    <div class="mt-5">
+                    {{-- <div class="mt-5">
                         <div class="text-primaryColor">
                             Choose file <span class="text-red-500">*</span>
                         </div>
@@ -30,7 +30,44 @@
                                 </div>
                             @enderror
                         </div>
-                    </div>
+                    </div> --}}
+
+<div class="mt-5">
+    <div class="text-primaryColor">
+        Image URL or Media Library <span class="text-red-500">*</span>
+    </div>
+
+    <div class="mt-2">
+        <div class="flex gap-5 items-center">
+            <input
+                wire:model.lazy="image_placeholder_text"
+                placeholder="Paste image URL, e.g. https://domain.com/logo.png"
+                type="url"
+                autocomplete="url"
+                inputmode="url"
+                class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200"
+            >
+
+            <button
+                type="button"
+                wire:click.prevent="chooseImage"
+                class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-5 rounded items-center text-sm cursor-pointer"
+            >
+                Choose
+            </button>
+        </div>
+
+        <p class="text-xs text-gray-500 mt-1">
+            Paste a direct public image URL or click Choose to select from Media Library.
+        </p>
+
+        @error('image_placeholder_text')
+            <div class="text-red-500 text-xs italic mt-1">
+                {{ $message }}
+            </div>
+        @enderror
+    </div>
+</div>
 
                     <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                         <button type="button"

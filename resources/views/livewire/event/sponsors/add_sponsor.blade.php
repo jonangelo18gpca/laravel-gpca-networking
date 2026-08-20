@@ -18,7 +18,8 @@
                             Category <span class="text-red-500">*</span>
                         </div>
                         <div class="mt-2">
-                            <select wire:model.lazy="feature_id" class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
+                            <select wire:model.lazy="feature_id"
+                                class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
                                 <option value=""></option>
                                 @foreach ($categoryChoices as $categoryChoice)
                                     <option value="{{ $categoryChoice['id'] }}">{{ $categoryChoice['value'] }}</option>
@@ -38,7 +39,8 @@
                             Type <span class="text-red-500">*</span>
                         </div>
                         <div class="mt-2">
-                            <select wire:model.lazy="sponsor_type_id" class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
+                            <select wire:model.lazy="sponsor_type_id"
+                                class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
                                 <option value=""></option>
                                 @foreach ($typeChoices as $typeChoice)
                                     <option value="{{ $typeChoice['id'] }}">{{ $typeChoice['value'] }}</option>
@@ -72,7 +74,7 @@
 
                     <div class="mt-5">
                         <div class="text-primaryColor">
-                            Website 
+                            Website
                         </div>
                         <div class="mt-2">
                             <input placeholder="Website" type="text" wire:model.lazy="website"
@@ -84,12 +86,18 @@
                         <div>
                             <div class="text-primaryColor">
                                 Logo
+                                <span class="text-xs text-gray-500">
+                                    (Paste URL or choose from Media Library)
+                                </span>
                             </div>
                             <div class="mt-2">
                                 <div class="flex gap-5 items-center">
-                                    <input wire:model.lazy="image_placeholder_text" placeholder="test.jpg" type="text"
+                                    {{-- <input wire:model.lazy="image_placeholder_text" placeholder="test.jpg" type="text"
                                         class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200"
-                                        disabled>
+                                        disabled> --}}
+                                    <input wire:model.lazy="image_placeholder_text"
+                                        placeholder="Paste image URL, e.g. https://domain.com/logo.png" type="url"
+                                        class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
                                     <button type="button" wire:click.prevent="chooseImage"
                                         class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-5 rounded items-center text-sm cursor-pointer">Choose</button>
                                 </div>

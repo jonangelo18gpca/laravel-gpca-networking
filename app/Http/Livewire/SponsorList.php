@@ -61,7 +61,10 @@ class SponsorList extends Component
 
                 array_push($this->finalListOfSponsors, [
                     'id' => $sponsor->id,
-                    'logo' => Medias::where('id', $sponsor->logo_media_id)->value('file_url'),
+                    // 'logo' => Medias::where('id', $sponsor->logo_media_id)->value('file_url'),
+                    'logo' => $sponsor->logo_media_id
+                        ? Medias::where('id', $sponsor->logo_media_id)->value('file_url')
+                        : null,
                     'name' => $sponsor->name,
                     'category' => $category,
                     'type' => $type,
@@ -78,7 +81,7 @@ class SponsorList extends Component
 
         $this->addSponsorForm = false;
         $this->editSponsorDateTimeForm = false;
-        
+
         $this->mediaFileList = getMediaFileList();
         $this->chooseImageModal = false;
     }
@@ -96,6 +99,8 @@ class SponsorList extends Component
 
     public function showAddSponsor()
     {
+
+
         $sponsorTypes = SponsorTypes::where('event_id', $this->event->id)->get();
 
         if ($sponsorTypes->isNotEmpty()) {
@@ -131,6 +136,7 @@ class SponsorList extends Component
             'name' => 'required',
             'feature_id' => 'required',
             'sponsor_type_id' => 'required',
+            'image_placeholder_text' => 'nullable|url|max:2048',
         ]);
 
         $this->dispatchBrowserEvent('swal:confirmation', [
@@ -157,13 +163,39 @@ class SponsorList extends Component
 
     public function addSponsor()
     {
+
+        $logoMediaId = $this->image_media_id;
+
+        if (!$logoMediaId && !empty($this->image_placeholder_text)) {
+            $imageUrl = trim($this->image_placeholder_text);
+
+            $path = parse_url($imageUrl, PHP_URL_PATH);
+            $fileName = basename($path) ?: 'sponsor-logo';
+            $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+            $media = Medias::create([
+                'file_url' => $imageUrl,
+                'file_directory' => 'external-url',
+                'file_name' => $fileName,
+                'file_type' => $extension ?: 'image',
+                'file_size' => 0,
+                'width' => 0,
+                'height' => 0,
+                'date_uploaded' => Carbon::now(),
+            ]);
+
+            $logoMediaId = $media->id;
+        }
+
+
         $newSponsor = Sponsors::create([
             'event_id' => $this->event->id,
             'feature_id' => $this->feature_id,
             'sponsor_type_id' => $this->sponsor_type_id,
             'name' => $this->name,
             'website' => $this->website,
-            'logo_media_id' => $this->image_media_id ?? null,
+            // 'logo_media_id' => $this->image_media_id ?? null,
+            'logo_media_id' => $logoMediaId,
             'datetime_added' => Carbon::now(),
         ]);
 
@@ -180,18 +212,30 @@ class SponsorList extends Component
             }
         }
 
-        if($this->image_media_id){
+        // if ($this->image_media_id) {
+        //     mediaUsageUpdate(
+        //         MediaUsageUpdateTypes::ADD_ONLY->value,
+        //         $this->image_media_id,
+        //         MediaEntityTypes::SPONSOR_LOGO->value,
+        //         $newSponsor->id,
+        //     );
+        // }
+
+
+        if ($logoMediaId) {
             mediaUsageUpdate(
                 MediaUsageUpdateTypes::ADD_ONLY->value,
-                $this->image_media_id,
+                $logoMediaId,
                 MediaEntityTypes::SPONSOR_LOGO->value,
                 $newSponsor->id,
             );
         }
-
         array_push($this->finalListOfSponsors, [
             'id' => $newSponsor->id,
-            'logo' => $this->image_media_id ? Medias::where('id', $this->image_media_id)->value('file_url') : null,
+            // 'logo' => $this->image_media_id ? Medias::where('id', $this->image_media_id)->value('file_url') : null,
+            'logo' => $logoMediaId
+                ? Medias::where('id', $logoMediaId)->value('file_url')
+                : null,
             'name' => $this->name,
             'category' => $selectedCategory,
             'type' => $selectedType,
@@ -209,7 +253,7 @@ class SponsorList extends Component
         ]);
     }
 
-    
+
 
     // FOR CHOOSING IMAGE MODAL
     public function chooseImage()
@@ -230,7 +274,8 @@ class SponsorList extends Component
     public function selectChooseImage()
     {
         $this->image_media_id = $this->activeSelectedImage['id'];
-        $this->image_placeholder_text = $this->activeSelectedImage['file_name'];
+        // $this->image_placeholder_text = $this->activeSelectedImage['file_name'];
+        $this->image_placeholder_text = $this->activeSelectedImage['file_url'];
         $this->activeSelectedImage = null;
         $this->chooseImageModal = false;
     }
@@ -243,7 +288,7 @@ class SponsorList extends Component
         $this->chooseImageModal = false;
     }
 
-    
+
 
 
     public function updateSponsorStatus($arrayIndex)
@@ -297,9 +342,9 @@ class SponsorList extends Component
         ]);
     }
 
-    
 
-    
+
+
 
     public function deleteSponsorConfirmation($index)
     {
@@ -317,8 +362,8 @@ class SponsorList extends Component
     {
         $sponsor = Sponsors::where('id', $this->finalListOfSponsors[$this->activeDeleteIndex]['id'])->first();
 
-        if($sponsor){
-            if($sponsor->logo_media_id){
+        if ($sponsor) {
+            if ($sponsor->logo_media_id) {
                 mediaUsageUpdate(
                     MediaUsageUpdateTypes::REMOVED_ONLY->value,
                     $sponsor->logo_media_id,
@@ -328,7 +373,7 @@ class SponsorList extends Component
                 );
             }
 
-            if($sponsor->banner_media_id){
+            if ($sponsor->banner_media_id) {
                 mediaUsageUpdate(
                     MediaUsageUpdateTypes::REMOVED_ONLY->value,
                     $sponsor->banner_media_id,
@@ -347,7 +392,7 @@ class SponsorList extends Component
             unset($this->finalListOfSponsors[$this->activeDeleteIndex]);
             $this->finalListOfSponsors = array_values($this->finalListOfSponsors);
         }
-        
+
         $this->dispatchBrowserEvent('swal:success', [
             'type' => 'success',
             'message' => 'Sponsor deleted successfully!',

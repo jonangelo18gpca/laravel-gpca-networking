@@ -44,7 +44,10 @@ class ExhibitorList extends Component
                     'stand_number' => $exhibitor->stand_number,
                     'website' => $exhibitor->website,
                     'is_active' => $exhibitor->is_active,
-                    'logo' => Medias::where('id', $exhibitor->logo_media_id)->value('file_url'),
+                    // 'logo' => Medias::where('id', $exhibitor->logo_media_id)->value('file_url'),
+                    'logo' => $exhibitor->logo_media_id
+                        ? Medias::where('id', $exhibitor->logo_media_id)->value('file_url')
+                        : null,
                     'datetime_added' => Carbon::parse($exhibitor->datetime_added)->format('M j, Y g:i A'),
                 ]);
             }
@@ -56,7 +59,7 @@ class ExhibitorList extends Component
 
         $this->addExhibitorForm = false;
         $this->editExhibitorDateTimeForm = false;
-        
+
         $this->mediaFileList = getMediaFileList();
         $this->chooseImageModal = false;
     }
@@ -75,6 +78,8 @@ class ExhibitorList extends Component
     {
         $this->validate([
             'name' => 'required',
+            'image_media_id' => 'nullable|exists:medias,id',
+            'image_placeholder_text' => 'nullable|required_without:image_media_id|url|max:2048',
         ]);
 
         $this->dispatchBrowserEvent('swal:confirmation', [
@@ -96,33 +101,101 @@ class ExhibitorList extends Component
         $this->image_placeholder_text = null;
     }
 
-    public function addExhibitor(){
+    // public function addExhibitor()
+    // {
+
+
+    //     $newExhibitor = Exhibitors::create([
+    //         'event_id' => $this->event->id,
+    //         'name' => $this->name,
+    //         'website' => $this->website,
+    //         'stand_number' => $this->stand_number,
+    //         'logo_media_id' => $this->image_media_id ?? null,
+    //         'datetime_added' => Carbon::now(),
+    //     ]);
+
+
+    //     if ($this->image_media_id) {
+    //         mediaUsageUpdate(
+    //             MediaUsageUpdateTypes::ADD_ONLY->value,
+    //             $this->image_media_id,
+    //             MediaEntityTypes::EXHIBITOR_LOGO->value,
+    //             $newExhibitor->id,
+    //         );
+    //     }
+    //     array_push($this->finalListOfExhibitors, [
+    //         'id' => $newExhibitor->id,
+    //         'name' => $this->name,
+    //         'stand_number' => $this->stand_number,
+    //         'website' => $this->website,
+    //         'is_active' => true,
+    //         'logo' => $this->image_media_id ? Medias::where('id', $this->image_media_id)->value('file_url') : null,
+    //         'datetime_added' => Carbon::parse(Carbon::now())->format('M j, Y g:i A'),
+    //     ]);
+
+    //     $this->resetAddExhibitorFields();
+
+    //     $this->dispatchBrowserEvent('swal:success', [
+    //         'type' => 'success',
+    //         'message' => 'Exhibitor added successfully!',
+    //         'text' => ''
+    //     ]);
+    // }
+
+
+    public function addExhibitor()
+    {
+        $logoMediaId = $this->image_media_id;
+
+        if (!$logoMediaId && !empty($this->image_placeholder_text)) {
+            $imageUrl = trim($this->image_placeholder_text);
+
+            $path = parse_url($imageUrl, PHP_URL_PATH);
+            $fileName = basename($path) ?: 'exhibitor-logo';
+            $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+            $media = Medias::create([
+                'file_url' => $imageUrl,
+                'file_directory' => 'external-url',
+                'file_name' => $fileName,
+                'file_type' => $extension ?: 'image',
+                'file_size' => 0,
+                'width' => 0,
+                'height' => 0,
+                'date_uploaded' => Carbon::now(),
+            ]);
+
+            $logoMediaId = $media->id;
+        }
+
         $newExhibitor = Exhibitors::create([
             'event_id' => $this->event->id,
             'name' => $this->name,
             'website' => $this->website,
             'stand_number' => $this->stand_number,
-            'logo_media_id' => $this->image_media_id ?? null,
+            'logo_media_id' => $logoMediaId,
             'datetime_added' => Carbon::now(),
         ]);
-        
 
-        if($this->image_media_id){
+        if ($logoMediaId) {
             mediaUsageUpdate(
                 MediaUsageUpdateTypes::ADD_ONLY->value,
-                $this->image_media_id,
+                $logoMediaId,
                 MediaEntityTypes::EXHIBITOR_LOGO->value,
                 $newExhibitor->id,
             );
         }
+
         array_push($this->finalListOfExhibitors, [
             'id' => $newExhibitor->id,
             'name' => $this->name,
             'stand_number' => $this->stand_number,
             'website' => $this->website,
             'is_active' => true,
-            'logo' => $this->image_media_id ? Medias::where('id', $this->image_media_id)->value('file_url') : null,
-            'datetime_added' => Carbon::parse(Carbon::now())->format('M j, Y g:i A'),
+            'logo' => $logoMediaId
+                ? Medias::where('id', $logoMediaId)->value('file_url')
+                : null,
+            'datetime_added' => Carbon::now()->format('M j, Y g:i A'),
         ]);
 
         $this->resetAddExhibitorFields();
@@ -130,11 +203,11 @@ class ExhibitorList extends Component
         $this->dispatchBrowserEvent('swal:success', [
             'type' => 'success',
             'message' => 'Exhibitor added successfully!',
-            'text' => ''
+            'text' => '',
         ]);
     }
 
-    
+
 
     // FOR CHOOSING IMAGE MODAL
     public function chooseImage()
@@ -155,7 +228,8 @@ class ExhibitorList extends Component
     public function selectChooseImage()
     {
         $this->image_media_id = $this->activeSelectedImage['id'];
-        $this->image_placeholder_text = $this->activeSelectedImage['file_name'];
+        // $this->image_placeholder_text = $this->activeSelectedImage['file_name'];
+        $this->image_placeholder_text = $this->activeSelectedImage['file_url'];
         $this->activeSelectedImage = null;
         $this->chooseImageModal = false;
     }
@@ -172,7 +246,8 @@ class ExhibitorList extends Component
 
 
 
-    public function updateExhibitorStatus($arrayIndex){
+    public function updateExhibitorStatus($arrayIndex)
+    {
         Exhibitors::where('id', $this->finalListOfExhibitors[$arrayIndex]['id'])->update([
             'is_active' => !$this->finalListOfExhibitors[$arrayIndex]['is_active'],
         ]);
@@ -200,7 +275,7 @@ class ExhibitorList extends Component
         $this->exhibitorDateTime = null;
         $this->exhibitorArrayIndex = null;
     }
-    
+
     public function editExhibitorDateTime()
     {
         $this->validate([
@@ -222,7 +297,7 @@ class ExhibitorList extends Component
         ]);
     }
 
-    
+
 
     public function deleteExhibitorConfirmation($index)
     {
@@ -240,8 +315,8 @@ class ExhibitorList extends Component
     {
         $exhibitor = Exhibitors::where('id', $this->finalListOfExhibitors[$this->activeDeleteIndex]['id'])->first();
 
-        if($exhibitor){
-            if($exhibitor->logo_media_id){
+        if ($exhibitor) {
+            if ($exhibitor->logo_media_id) {
                 mediaUsageUpdate(
                     MediaUsageUpdateTypes::REMOVED_ONLY->value,
                     $exhibitor->logo_media_id,
@@ -251,7 +326,7 @@ class ExhibitorList extends Component
                 );
             }
 
-            if($exhibitor->banner_media_id){
+            if ($exhibitor->banner_media_id) {
                 mediaUsageUpdate(
                     MediaUsageUpdateTypes::REMOVED_ONLY->value,
                     $exhibitor->banner_media_id,
@@ -266,7 +341,7 @@ class ExhibitorList extends Component
             unset($this->finalListOfExhibitors[$this->activeDeleteIndex]);
             $this->finalListOfExhibitors = array_values($this->finalListOfExhibitors);
         }
-        
+
         $this->dispatchBrowserEvent('swal:success', [
             'type' => 'success',
             'message' => 'Exhibitor deleted successfully!',

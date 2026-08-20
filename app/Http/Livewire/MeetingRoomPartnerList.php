@@ -71,20 +71,39 @@ class MeetingRoomPartnerList extends Component
         $this->addMeetingRoomPartnerForm = true;
     }
 
-    public function addMeetingRoomPartnerConfirmation()
-    {
-        $this->validate([
-            'name' => 'required',
-        ]);
+    // public function addMeetingRoomPartnerConfirmation()
+    // {
+    //     $this->validate([
+    //         'name' => 'required',
+    //     ]);
 
-        $this->dispatchBrowserEvent('swal:confirmation', [
-            'type' => 'warning',
-            'message' => 'Are you sure?',
-            'text' => "",
-            'buttonConfirmText' => "Yes, add it!",
-            'livewireEmit' => "addMeetingRoomPartnerConfirmed",
-        ]);
-    }
+    //     $this->dispatchBrowserEvent('swal:confirmation', [
+    //         'type' => 'warning',
+    //         'message' => 'Are you sure?',
+    //         'text' => "",
+    //         'buttonConfirmText' => "Yes, add it!",
+    //         'livewireEmit' => "addMeetingRoomPartnerConfirmed",
+    //     ]);
+    // }
+
+
+    public function addMeetingRoomPartnerConfirmation()
+{
+    $this->validate([
+        'name' => 'required',
+        'image_media_id' => 'nullable|exists:medias,id',
+        'image_placeholder_text' => 'nullable|required_without:image_media_id|url|max:2048',
+    ]);
+
+    $this->dispatchBrowserEvent('swal:confirmation', [
+        'type' => 'warning',
+        'message' => 'Are you sure?',
+        'text' => '',
+        'buttonConfirmText' => 'Yes, add it!',
+        'livewireEmit' => 'addMeetingRoomPartnerConfirmed',
+    ]);
+}
+
 
     public function resetAddMeetingRoomPartnerFields()
     {
@@ -96,43 +115,108 @@ class MeetingRoomPartnerList extends Component
         $this->image_placeholder_text = null;
     }
 
-    public function addMeetingRoomPartner(){
-        $newMeetingRoomPartner = MeetingRoomPartners::create([
-            'event_id' => $this->event->id,
-            'name' => $this->name,
-            'website' => $this->website,
-            'location' => $this->location,
-            'logo_media_id' => $this->image_media_id ?? null,
-            'datetime_added' => Carbon::now(),
-        ]);
+    // public function addMeetingRoomPartner(){
+    //     $newMeetingRoomPartner = MeetingRoomPartners::create([
+    //         'event_id' => $this->event->id,
+    //         'name' => $this->name,
+    //         'website' => $this->website,
+    //         'location' => $this->location,
+    //         'logo_media_id' => $this->image_media_id ?? null,
+    //         'datetime_added' => Carbon::now(),
+    //     ]);
 
-        if($this->image_media_id){
-            mediaUsageUpdate(
-                MediaUsageUpdateTypes::ADD_ONLY->value,
-                $this->image_media_id,
-                MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value,
-                $newMeetingRoomPartner->id,
-            );
-        }
+    //     if($this->image_media_id){
+    //         mediaUsageUpdate(
+    //             MediaUsageUpdateTypes::ADD_ONLY->value,
+    //             $this->image_media_id,
+    //             MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value,
+    //             $newMeetingRoomPartner->id,
+    //         );
+    //     }
         
-        array_push($this->finalListOfMeetingRoomPartners, [
-            'id' => $newMeetingRoomPartner->id,
-            'name' => $this->name,
-            'location' => $this->location,
-            'website' => $this->website,
-            'is_active' => true,
-            'logo' => $this->image_media_id ? Medias::where('id', $this->image_media_id)->value('file_url') : null,
-            'datetime_added' => Carbon::parse(Carbon::now())->format('M j, Y g:i A'),
+    //     array_push($this->finalListOfMeetingRoomPartners, [
+    //         'id' => $newMeetingRoomPartner->id,
+    //         'name' => $this->name,
+    //         'location' => $this->location,
+    //         'website' => $this->website,
+    //         'is_active' => true,
+    //         'logo' => $this->image_media_id ? Medias::where('id', $this->image_media_id)->value('file_url') : null,
+    //         'datetime_added' => Carbon::parse(Carbon::now())->format('M j, Y g:i A'),
+    //     ]);
+
+    //     $this->resetAddMeetingRoomPartnerFields();
+
+    //     $this->dispatchBrowserEvent('swal:success', [
+    //         'type' => 'success',
+    //         'message' => 'Meeting room partner added successfully!',
+    //         'text' => ''
+    //     ]);
+    // }
+
+
+    public function addMeetingRoomPartner()
+{
+    $logoMediaId = $this->image_media_id;
+
+    if (!$logoMediaId && !empty($this->image_placeholder_text)) {
+        $imageUrl = trim($this->image_placeholder_text);
+
+        $path = parse_url($imageUrl, PHP_URL_PATH);
+        $fileName = basename($path) ?: 'meeting-room-partner-logo';
+        $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+        $media = Medias::create([
+            'file_url' => $imageUrl,
+            'file_directory' => 'external-url',
+            'file_name' => $fileName,
+            'file_type' => $extension ?: 'image',
+            'file_size' => 0,
+            'width' => 0,
+            'height' => 0,
+            'date_uploaded' => Carbon::now(),
         ]);
 
-        $this->resetAddMeetingRoomPartnerFields();
-
-        $this->dispatchBrowserEvent('swal:success', [
-            'type' => 'success',
-            'message' => 'Meeting room partner added successfully!',
-            'text' => ''
-        ]);
+        $logoMediaId = $media->id;
     }
+
+    $newMeetingRoomPartner = MeetingRoomPartners::create([
+        'event_id' => $this->event->id,
+        'name' => $this->name,
+        'website' => $this->website,
+        'location' => $this->location,
+        'logo_media_id' => $logoMediaId,
+        'datetime_added' => Carbon::now(),
+    ]);
+
+    if ($logoMediaId) {
+        mediaUsageUpdate(
+            MediaUsageUpdateTypes::ADD_ONLY->value,
+            $logoMediaId,
+            MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value,
+            $newMeetingRoomPartner->id,
+        );
+    }
+
+    array_push($this->finalListOfMeetingRoomPartners, [
+        'id' => $newMeetingRoomPartner->id,
+        'name' => $this->name,
+        'location' => $this->location,
+        'website' => $this->website,
+        'is_active' => true,
+        'logo' => $logoMediaId
+            ? Medias::where('id', $logoMediaId)->value('file_url')
+            : null,
+        'datetime_added' => Carbon::now()->format('M j, Y g:i A'),
+    ]);
+
+    $this->resetAddMeetingRoomPartnerFields();
+
+    $this->dispatchBrowserEvent('swal:success', [
+        'type' => 'success',
+        'message' => 'Meeting room partner added successfully!',
+        'text' => '',
+    ]);
+}
 
     
 
@@ -155,7 +239,8 @@ class MeetingRoomPartnerList extends Component
     public function selectChooseImage()
     {
         $this->image_media_id = $this->activeSelectedImage['id'];
-        $this->image_placeholder_text = $this->activeSelectedImage['file_name'];
+        // $this->image_placeholder_text = $this->activeSelectedImage['file_name'];
+        $this->image_placeholder_text = $this->activeSelectedImage['file_url'];
         $this->activeSelectedImage = null;
         $this->chooseImageModal = false;
     }

@@ -52,91 +52,224 @@ class MediaPartnerDetails extends Component
         $this->image_placeholder_text = null;
     }
 
-    public function editMediaPartnerAssetConfirmation()
-    {
+    // public function editMediaPartnerAssetConfirmation()
+    // {
         
-        $this->validate([
-            'image_placeholder_text' => 'required'
-        ]);
+    //     $this->validate([
+    //         'image_placeholder_text' => 'required'
+    //     ]);
 
-        $this->dispatchBrowserEvent('swal:confirmation', [
-            'type' => 'warning',
-            'message' => 'Are you sure?',
-            'text' => "",
-            'buttonConfirmText' => "Yes, update it!",
-            'livewireEmit' => "editMediaPartnerAssetConfirmed",
-        ]);
-    }
+    //     $this->dispatchBrowserEvent('swal:confirmation', [
+    //         'type' => 'warning',
+    //         'message' => 'Are you sure?',
+    //         'text' => "",
+    //         'buttonConfirmText' => "Yes, update it!",
+    //         'livewireEmit' => "editMediaPartnerAssetConfirmed",
+    //     ]);
+    // }
+
+
+public function editMediaPartnerAssetConfirmation()
+{
+    $this->validate([
+        'image_media_id' => [
+            'nullable',
+            'exists:' . (new Medias())->getTable() . ',id',
+        ],
+        'image_placeholder_text' => [
+            'nullable',
+            'required_without:image_media_id',
+            'url',
+            'max:2048',
+        ],
+    ]);
+
+    $this->dispatchBrowserEvent('swal:confirmation', [
+        'type' => 'warning',
+        'message' => 'Are you sure?',
+        'text' => '',
+        'buttonConfirmText' => 'Yes, update it!',
+        'livewireEmit' => 'editMediaPartnerAssetConfirmed',
+    ]);
+}
+    // public function editMediaPartnerAsset()
+    // {
+    //     if ($this->assetType == "Media partner logo") {
+    //         MediaPartners::where('id', $this->mediaPartnerData['mediaPartnerId'])->update([
+    //             'logo_media_id' => $this->image_media_id,
+    //         ]);
+
+    //         if ($this->mediaPartnerData['logo']['media_id'] != null) {
+    //             mediaUsageUpdate(
+    //                 MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
+    //                 $this->image_media_id,
+    //                 MediaEntityTypes::MEDIA_PARTNER_LOGO->value,
+    //                 $this->mediaPartnerData['mediaPartnerId'],
+    //                 $this->mediaPartnerData['logo']['media_usage_id']
+    //             );
+    //         } else {
+    //             mediaUsageUpdate(
+    //                 MediaUsageUpdateTypes::ADD_ONLY->value,
+    //                 $this->image_media_id,
+    //                 MediaEntityTypes::MEDIA_PARTNER_LOGO->value,
+    //                 $this->mediaPartnerData['mediaPartnerId'],
+    //                 $this->mediaPartnerData['logo']['media_usage_id']
+    //             );
+    //         }
+
+
+    //         $this->mediaPartnerData['logo'] = [
+    //             'media_id' => $this->image_media_id,
+    //             'media_usage_id' => getMediaUsageId($this->image_media_id, MediaEntityTypes::MEDIA_PARTNER_LOGO->value, $this->mediaPartnerData['mediaPartnerId']),
+    //             'url' => Medias::where('id', $this->image_media_id)->value('file_url'),
+    //         ];
+    //     } else {
+    //         MediaPartners::where('id', $this->mediaPartnerData['mediaPartnerId'])->update([
+    //             'banner_media_id' => $this->image_media_id,
+    //         ]);
+
+    //         if ($this->mediaPartnerData['banner']['media_id'] != null) {
+    //             mediaUsageUpdate(
+    //                 MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
+    //                 $this->image_media_id,
+    //                 MediaEntityTypes::MEDIA_PARTNER_BANNER->value,
+    //                 $this->mediaPartnerData['mediaPartnerId'],
+    //                 $this->mediaPartnerData['banner']['media_usage_id']
+    //             );
+    //         } else {
+    //             mediaUsageUpdate(
+    //                 MediaUsageUpdateTypes::ADD_ONLY->value,
+    //                 $this->image_media_id,
+    //                 MediaEntityTypes::MEDIA_PARTNER_BANNER->value,
+    //                 $this->mediaPartnerData['mediaPartnerId'],
+    //                 $this->mediaPartnerData['banner']['media_usage_id']
+    //             );
+    //         }
+
+    //         $this->mediaPartnerData['banner'] = [
+    //             'media_id' => $this->image_media_id,
+    //             'media_usage_id' => getMediaUsageId($this->image_media_id, MediaEntityTypes::MEDIA_PARTNER_BANNER->value, $this->mediaPartnerData['mediaPartnerId']),
+    //             'url' => Medias::where('id', $this->image_media_id)->value('file_url'),
+    //         ];
+    //     }
+
+    //     $this->dispatchBrowserEvent('swal:success', [
+    //         'type' => 'success',
+    //         'message' => $this->assetType . ' updated succesfully!',
+    //         'text' => "",
+    //     ]);
+
+    //     $this->resetEditMediaPartnerAssetFields();
+    // }
+
 
     public function editMediaPartnerAsset()
-    {
-        if ($this->assetType == "Media partner logo") {
-            MediaPartners::where('id', $this->mediaPartnerData['mediaPartnerId'])->update([
-                'logo_media_id' => $this->image_media_id,
-            ]);
+{
+    $mediaId = $this->image_media_id;
 
-            if ($this->mediaPartnerData['logo']['media_id'] != null) {
-                mediaUsageUpdate(
-                    MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
-                    $this->image_media_id,
-                    MediaEntityTypes::MEDIA_PARTNER_LOGO->value,
-                    $this->mediaPartnerData['mediaPartnerId'],
-                    $this->mediaPartnerData['logo']['media_usage_id']
-                );
-            } else {
-                mediaUsageUpdate(
-                    MediaUsageUpdateTypes::ADD_ONLY->value,
-                    $this->image_media_id,
-                    MediaEntityTypes::MEDIA_PARTNER_LOGO->value,
-                    $this->mediaPartnerData['mediaPartnerId'],
-                    $this->mediaPartnerData['logo']['media_usage_id']
-                );
-            }
+    if (!$mediaId && !empty($this->image_placeholder_text)) {
+        $imageUrl = trim($this->image_placeholder_text);
 
+        $path = parse_url($imageUrl, PHP_URL_PATH);
+        $fileName = basename($path) ?: 'media-partner-image';
+        $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 
-            $this->mediaPartnerData['logo'] = [
-                'media_id' => $this->image_media_id,
-                'media_usage_id' => getMediaUsageId($this->image_media_id, MediaEntityTypes::MEDIA_PARTNER_LOGO->value, $this->mediaPartnerData['mediaPartnerId']),
-                'url' => Medias::where('id', $this->image_media_id)->value('file_url'),
-            ];
-        } else {
-            MediaPartners::where('id', $this->mediaPartnerData['mediaPartnerId'])->update([
-                'banner_media_id' => $this->image_media_id,
-            ]);
-
-            if ($this->mediaPartnerData['banner']['media_id'] != null) {
-                mediaUsageUpdate(
-                    MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
-                    $this->image_media_id,
-                    MediaEntityTypes::MEDIA_PARTNER_BANNER->value,
-                    $this->mediaPartnerData['mediaPartnerId'],
-                    $this->mediaPartnerData['banner']['media_usage_id']
-                );
-            } else {
-                mediaUsageUpdate(
-                    MediaUsageUpdateTypes::ADD_ONLY->value,
-                    $this->image_media_id,
-                    MediaEntityTypes::MEDIA_PARTNER_BANNER->value,
-                    $this->mediaPartnerData['mediaPartnerId'],
-                    $this->mediaPartnerData['banner']['media_usage_id']
-                );
-            }
-
-            $this->mediaPartnerData['banner'] = [
-                'media_id' => $this->image_media_id,
-                'media_usage_id' => getMediaUsageId($this->image_media_id, MediaEntityTypes::MEDIA_PARTNER_BANNER->value, $this->mediaPartnerData['mediaPartnerId']),
-                'url' => Medias::where('id', $this->image_media_id)->value('file_url'),
-            ];
-        }
-
-        $this->dispatchBrowserEvent('swal:success', [
-            'type' => 'success',
-            'message' => $this->assetType . ' updated succesfully!',
-            'text' => "",
+        $media = Medias::create([
+            'file_url' => $imageUrl,
+            'file_directory' => 'external-url',
+            'file_name' => $fileName,
+            'file_type' => $extension ?: 'image',
+            'file_size' => 0,
+            'width' => 0,
+            'height' => 0,
+            'date_uploaded' => now(),
         ]);
 
-        $this->resetEditMediaPartnerAssetFields();
+        $mediaId = $media->id;
     }
+
+    if (!$mediaId) {
+        $this->addError(
+            'image_placeholder_text',
+            'Please choose an image or provide a valid image URL.'
+        );
+
+        return;
+    }
+
+    if ($this->assetType === 'Media partner logo') {
+        MediaPartners::where('id', $this->mediaPartnerData['mediaPartnerId'])->update([
+            'logo_media_id' => $mediaId,
+        ]);
+
+        if (!empty($this->mediaPartnerData['logo']['media_id'])) {
+            mediaUsageUpdate(
+                MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
+                $mediaId,
+                MediaEntityTypes::MEDIA_PARTNER_LOGO->value,
+                $this->mediaPartnerData['mediaPartnerId'],
+                $this->mediaPartnerData['logo']['media_usage_id']
+            );
+        } else {
+            mediaUsageUpdate(
+                MediaUsageUpdateTypes::ADD_ONLY->value,
+                $mediaId,
+                MediaEntityTypes::MEDIA_PARTNER_LOGO->value,
+                $this->mediaPartnerData['mediaPartnerId']
+            );
+        }
+
+        $this->mediaPartnerData['logo'] = [
+            'media_id' => $mediaId,
+            'media_usage_id' => getMediaUsageId(
+                $mediaId,
+                MediaEntityTypes::MEDIA_PARTNER_LOGO->value,
+                $this->mediaPartnerData['mediaPartnerId']
+            ),
+            'url' => Medias::where('id', $mediaId)->value('file_url'),
+        ];
+    } else {
+        MediaPartners::where('id', $this->mediaPartnerData['mediaPartnerId'])->update([
+            'banner_media_id' => $mediaId,
+        ]);
+
+        if (!empty($this->mediaPartnerData['banner']['media_id'])) {
+            mediaUsageUpdate(
+                MediaUsageUpdateTypes::REMOVED_THEN_ADD->value,
+                $mediaId,
+                MediaEntityTypes::MEDIA_PARTNER_BANNER->value,
+                $this->mediaPartnerData['mediaPartnerId'],
+                $this->mediaPartnerData['banner']['media_usage_id']
+            );
+        } else {
+            mediaUsageUpdate(
+                MediaUsageUpdateTypes::ADD_ONLY->value,
+                $mediaId,
+                MediaEntityTypes::MEDIA_PARTNER_BANNER->value,
+                $this->mediaPartnerData['mediaPartnerId']
+            );
+        }
+
+        $this->mediaPartnerData['banner'] = [
+            'media_id' => $mediaId,
+            'media_usage_id' => getMediaUsageId(
+                $mediaId,
+                MediaEntityTypes::MEDIA_PARTNER_BANNER->value,
+                $this->mediaPartnerData['mediaPartnerId']
+            ),
+            'url' => Medias::where('id', $mediaId)->value('file_url'),
+        ];
+    }
+
+    $this->dispatchBrowserEvent('swal:success', [
+        'type' => 'success',
+        'message' => $this->assetType . ' updated successfully!',
+        'text' => '',
+    ]);
+
+    $this->resetEditMediaPartnerAssetFields();
+}
+
 
     // FOR CHOOSING IMAGE MODAL
     public function chooseImage()
@@ -154,13 +287,22 @@ class MediaPartnerDetails extends Component
         $this->activeSelectedImage = array();
     }
 
+    // public function selectChooseImage()
+    // {
+    //     $this->image_media_id = $this->activeSelectedImage['id'];
+    //     $this->image_placeholder_text = $this->activeSelectedImage['file_name'];
+    //     $this->activeSelectedImage = null;
+    //     $this->chooseImageModal = false;
+    // }
+
+
     public function selectChooseImage()
-    {
-        $this->image_media_id = $this->activeSelectedImage['id'];
-        $this->image_placeholder_text = $this->activeSelectedImage['file_name'];
-        $this->activeSelectedImage = null;
-        $this->chooseImageModal = false;
-    }
+{
+    $this->image_media_id = $this->activeSelectedImage['id'];
+    $this->image_placeholder_text = $this->activeSelectedImage['file_url'];
+    $this->activeSelectedImage = null;
+    $this->chooseImageModal = false;
+}
 
     public function cancelChooseImage()
     {
