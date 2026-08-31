@@ -1002,7 +1002,7 @@ public function apiAttendeeProfile(Request $request, $api_code, $eventCategory, 
                             'mediaPartner_id' => $favorite->mediaPartner->id,
                             'name' => $favorite->mediaPartner->name,
                             'website' => $favorite->mediaPartner->website,
-                            'logo' => $favorite->mediaPartner->logo->file_url ?? null,
+                            'logo' => $favorite->mediaPartner->logo->file_ ?? null,
                         ]);
                     }
                 }

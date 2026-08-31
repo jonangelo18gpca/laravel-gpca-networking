@@ -119,6 +119,12 @@ class EventController extends Controller
                     'is_accessible_in_the_app' => $event->is_accessible_in_the_app,
 
                     'year' => $event->year,
+
+                    'sponsors_banner_carousel' => $event->sponsors_banner_carousel ?? [],
+
+                    'show_event_features' => $event->show_event_features,
+                    'show_social_networkings' => $event->show_social_networkings,
+                    'vertical_images_section' => $event->vertical_images_section ?? [],
                 ],
                 "eventColors" => [
                     'primary_bg_color' => $event->primary_bg_color,
@@ -178,6 +184,7 @@ class EventController extends Controller
                         'media_usage_id' => getMediaUsageId($event->app_sponsor_banner_media_id, MediaEntityTypes::EVENT_APP_SPONSOR_BANNER->value, $event->id),
                         'url' => $event->appSponsorBanner->file_url ?? null,
                     ],
+                    // 'sponsors_banner_carousel' => $event->sponsors_banner_carousel ?? [],
                 ],
             ],
         ]);
@@ -319,7 +326,7 @@ class EventController extends Controller
     {
 
 
-Log::info('HOMEPAGE API HIT');
+        Log::info('HOMEPAGE API HIT');
 
         try {
             $event = Event::with(['eventLogoInverted', 'eventBanner', 'appSponsorLogo'])->where('id', $eventId)->where('category', $eventCategory)->first();
@@ -376,7 +383,7 @@ Log::info('HOMEPAGE API HIT');
 
     public function apiEventHomepagev2($apiCode, $eventCategory, $eventId, $attendeeId)
     {
-Log::info('HOMEPAGEV2 API HIT');
+        Log::info('HOMEPAGEV2 API HIT');
 
         try {
             $event = Event::with(['eventBanner'])->where('id', $eventId)->where('category', $eventCategory)->first();
@@ -388,64 +395,66 @@ Log::info('HOMEPAGEV2 API HIT');
             $attendee = auth()->user();
             $attendeeNotificationsCount = AttendeeNotification::with('notification')->where('event_id', $eventId)->where('attendee_id', $attendee->id)->where('is_seen', false)->count();
 
-            if ($eventCategory == "PC") {
-                $sponsorsBannerCarousel = [
-                    "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/8.jpg",
-                    "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/9.jpg",
-                    "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/10.jpg"
-                ];  
-            } else if ($eventCategory == "SCC") {
-                $sponsorsBannerCarousel = [
-                    "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/08/exhibitor1.jpg",
-                    "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/2.jpg",
-                    "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/3.jpg",
-                    "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/4.jpg",
-                    "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/5.jpg",
-                    "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/6.jpg",
-                    "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/7.jpg",
-                    "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/8.jpg",
-                    "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/9.jpg",
-                    "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/10.jpg",
-                ];
-            } else if ($eventCategory == "ANC") {
-                $sponsorsBannerCarousel = [
-                    "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/08/sponsor1.jpg",
-                    "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/08/sponsor2.jpg",
-                    "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/08/sponsor3.jpg",
-                    "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/08/sponsor4.jpg",
-                    "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/08/sponsor5.jpg",
-                    "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/08/exhibitor1.jpg",
-                    "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/09/exhibitor2.jpg",
-                    "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/09/exhibitor3.jpg",
-                    "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/09/exhibitor4.jpg",
-                    "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/09/mrp1.jpg",
-                    "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/09/event1.jpg",
-                    "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/08/event2.jpg",
-                ];
-            } else if ($eventCategory == "RCC") {
-                $sponsorsBannerCarousel = [
-                    "http://gpca.org.ae/conferences/rcc/wp-content/uploads/2025/10/sponsor1.jpg",
-                    "http://gpca.org.ae/conferences/rcc/wp-content/uploads/2025/10/event1.jpg",
-                ];
-            } else if ($eventCategory == "RIC") {
-                $sponsorsBannerCarousel = [
-                    "http://gpca.org.ae/conferences/rcc/wp-content/uploads/2025/10/sponsor1.jpg",
-                    "http://gpca.org.ae/conferences/rcc/wp-content/uploads/2025/10/event1.jpg",
-                ];
-            } else {
-                $sponsorsBannerCarousel = [
-                    "https://www.gpcaforum.com/wp-content/uploads/2025/12/slide1.jpg",
-                    "https://www.gpcaforum.com/wp-content/uploads/2025/10/slide2.jpg",
-                    "https://www.gpcaforum.com/wp-content/uploads/2025/10/slide3.jpg",
-                    "https://www.gpcaforum.com/wp-content/uploads/2025/10/slide4.jpg",
-                    "https://www.gpcaforum.com/wp-content/uploads/2025/10/slide5.jpg",
-                    "https://www.gpcaforum.com/wp-content/uploads/2025/10/slide6.jpg",
-                    "https://www.gpcaforum.com/wp-content/uploads/2025/10/slide7.jpg",
-                    "https://www.gpcaforum.com/wp-content/uploads/2025/11/slide8.jpg",
-                    "https://www.gpcaforum.com/wp-content/uploads/2025/10/slide9.jpg",
-                    "https://gpcachem.org/wp-content/uploads/2025/11/slide10.jpg",
-                ];
-            }
+            // if ($eventCategory == "PC") {
+            //     $sponsorsBannerCarousel = [
+            //         "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/8.jpg",
+            //         "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/9.jpg",
+            //         "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/10.jpg"
+            //     ];  
+            // } else if ($eventCategory == "SCC") {
+            //     $sponsorsBannerCarousel = [
+            //         "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/08/exhibitor1.jpg",
+            //         "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/2.jpg",
+            //         "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/3.jpg",
+            //         "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/4.jpg",
+            //         "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/5.jpg",
+            //         "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/6.jpg",
+            //         "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/7.jpg",
+            //         "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/8.jpg",
+            //         "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/9.jpg",
+            //         "https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/10.jpg",
+            //     ];
+            // } else if ($eventCategory == "ANC") {
+            //     $sponsorsBannerCarousel = [
+            //         "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/08/sponsor1.jpg",
+            //         "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/08/sponsor2.jpg",
+            //         "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/08/sponsor3.jpg",
+            //         "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/08/sponsor4.jpg",
+            //         "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/08/sponsor5.jpg",
+            //         "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/08/exhibitor1.jpg",
+            //         "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/09/exhibitor2.jpg",
+            //         "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/09/exhibitor3.jpg",
+            //         "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/09/exhibitor4.jpg",
+            //         "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/09/mrp1.jpg",
+            //         "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/09/event1.jpg",
+            //         "http://gpca.org.ae/conferences/anc/wp-content/uploads/2025/08/event2.jpg",
+            //     ];
+            // } else if ($eventCategory == "RCC") {
+            //     $sponsorsBannerCarousel = [
+            //         "http://gpca.org.ae/conferences/rcc/wp-content/uploads/2025/10/sponsor1.jpg",
+            //         "http://gpca.org.ae/conferences/rcc/wp-content/uploads/2025/10/event1.jpg",
+            //     ];
+            // } else if ($eventCategory == "RIC") {
+            //     $sponsorsBannerCarousel = [
+            //         "http://gpca.org.ae/conferences/rcc/wp-content/uploads/2025/10/sponsor1.jpg",
+            //         "http://gpca.org.ae/conferences/rcc/wp-content/uploads/2025/10/event1.jpg",
+            //     ];
+            // } else {
+            //     $sponsorsBannerCarousel = [
+            //         "https://www.gpcaforum.com/wp-content/uploads/2025/12/slide1.jpg",
+            //         "https://www.gpcaforum.com/wp-content/uploads/2025/10/slide2.jpg",
+            //         "https://www.gpcaforum.com/wp-content/uploads/2025/10/slide3.jpg",
+            //         "https://www.gpcaforum.com/wp-content/uploads/2025/10/slide4.jpg",
+            //         "https://www.gpcaforum.com/wp-content/uploads/2025/10/slide5.jpg",
+            //         "https://www.gpcaforum.com/wp-content/uploads/2025/10/slide6.jpg",
+            //         "https://www.gpcaforum.com/wp-content/uploads/2025/10/slide7.jpg",
+            //         "https://www.gpcaforum.com/wp-content/uploads/2025/11/slide8.jpg",
+            //         "https://www.gpcaforum.com/wp-content/uploads/2025/10/slide9.jpg",
+            //         "https://gpcachem.org/wp-content/uploads/2025/11/slide10.jpg",
+            //     ];
+            // }
+
+            $sponsorsBannerCarousel = $event->sponsors_banner_carousel ?? [];
 
             $eventFeatures = [
                 [
@@ -503,6 +512,10 @@ Log::info('HOMEPAGEV2 API HIT');
                 ],
             ];
 
+            $eventFeatures = $event->show_event_features ? $eventFeatures : [];
+            $socialNetworkings = $event->show_social_networkings ? $socialNetworkings : [];
+            $verticalImagesSection = $event->vertical_images_section ?? [];
+
             $data = [
                 // 'event_banner' => $event->eventBanner->file_url ?? null,
                 'event_banner' => optional($event->eventBanner)->file_url,
@@ -538,6 +551,8 @@ Log::info('HOMEPAGEV2 API HIT');
 
                 'event_features' => $eventFeatures,
                 'social_networkings' => $socialNetworkings,
+                'vertical_images_section' => $verticalImagesSection,
+
             ];
             return $this->success($data, "Event Homepage details", 200);
         } catch (\Exception $e) {
@@ -970,19 +985,19 @@ Log::info('HOMEPAGEV2 API HIT');
     public function apiGetNotifications($eventCategory, $eventId, $attendeeId)
     {
         // $attendeeNotifications = AttendeeNotification::with('notification')->where('event_id', $eventId)->where('attendee_id', $attendeeId)->orderBy('sent_datetime', 'DESC')->get();
-Log::info('AUTH USER API GetNotif', ['user' => auth()->user()]);
+        Log::info('AUTH USER API GetNotif', ['user' => auth()->user()]);
 
-            $attendee = auth()->user();
+        $attendee = auth()->user();
 
-    if (!$attendee) {
-        return [];
-    }
+        if (!$attendee) {
+            return [];
+        }
 
-    $attendeeNotifications = AttendeeNotification::with('notification')
-        ->where('event_id', $eventId)
-        ->where('attendee_id', $attendee->id)
-        ->orderBy('sent_datetime', 'DESC')
-        ->get();
+        $attendeeNotifications = AttendeeNotification::with('notification')
+            ->where('event_id', $eventId)
+            ->where('attendee_id', $attendee->id)
+            ->orderBy('sent_datetime', 'DESC')
+            ->get();
 
 
         if ($attendeeNotifications->isEmpty()) {

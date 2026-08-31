@@ -58,6 +58,20 @@ class Event extends Model
 
         'is_visible_in_the_app',
         'is_accessible_in_the_app',
+
+        'sponsors_banner_carousel',
+
+        'show_event_features',
+        'show_social_networkings',
+        'vertical_images_section',
+    ];
+
+
+    protected $casts = [
+    'sponsors_banner_carousel' => 'array',
+    'show_event_features' => 'boolean',
+    'show_social_networkings' => 'boolean',
+    'vertical_images_section' => 'array',
     ];
 
     public function eventLogo()

@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use DateTimeZone;
 use Livewire\Component;
 
+
 class EventDetails extends Component
 {
     public $eventData, $eventCategories;
@@ -38,7 +39,19 @@ class EventDetails extends Component
     public $assetType, $editEventAssetForm, $image_media_id, $image_placeholder_text;
     public $chooseImageModal, $mediaFileList = array(), $activeSelectedImage;
 
-    protected $listeners = ['editEventDetailsConfirmed' => 'editEventDetails', 'editEventColorsConfirmed' => 'editEventColors', 'editEventHTMLTextsConfirmed' => 'editEventHTMLTexts', 'editEventWebViewLinksConfirmed' => 'editEventWebViewLinks', 'editEventFloorPlanLinksConfirmed' => 'editEventFloorPlanLinks', 'editEventAssetConfirmed' => 'editEventAsset'];
+
+
+    // EDIT SPONSORS BANNER CAROUSEL
+    // public $editSponsorsBannerCarouselForm = false;
+    // public $carouselImages = [];
+
+    public $sponsors_banner_carousel_text;
+    public $editSponsorsBannerCarouselForm = false;
+
+    public $vertical_images_section_text;
+    public $editVerticalImagesSectionForm = false;
+
+    protected $listeners = ['editEventDetailsConfirmed' => 'editEventDetails', 'editEventColorsConfirmed' => 'editEventColors', 'editEventHTMLTextsConfirmed' => 'editEventHTMLTexts', 'editEventWebViewLinksConfirmed' => 'editEventWebViewLinks', 'editEventFloorPlanLinksConfirmed' => 'editEventFloorPlanLinks', 'editEventAssetConfirmed' => 'editEventAsset', 'editSponsorsBannerCarouselConfirmed' => 'editSponsorsBannerCarousel','editVerticalImagesSectionConfirmed' => 'editVerticalImagesSection',];
 
     public function mount($eventData)
     {
@@ -49,6 +62,8 @@ class EventDetails extends Component
         $this->editEventDetailsForm = false;
         $this->editEventColorsForm = false;
         $this->editEventHTMLTextsForm = false;
+        $this->editSponsorsBannerCarouselForm = false;
+        $this->editVerticalImagesSectionForm = false;
     }
 
     public function render()
@@ -393,6 +408,9 @@ class EventDetails extends Component
         $this->interactive_map_link = null;
     }
 
+
+
+
     public function editEventFloorPlanLinksConfirmation()
     {
         $this->dispatchBrowserEvent('swal:confirmation', [
@@ -664,6 +682,8 @@ class EventDetails extends Component
         $this->chooseImageModal = false;
     }
 
+
+
     public function cancelChooseImage()
     {
         $this->image_media_id = null;
@@ -785,4 +805,118 @@ class EventDetails extends Component
             ];
         }
     }
+
+
+    // EDIT SPONSORS BANNER CAROUSEL
+    public function showEditSponsorsBannerCarousel()
+    {
+        $urls = $this->eventData['eventDetails']['sponsors_banner_carousel'] ?? [];
+        $this->sponsors_banner_carousel_text = implode("\n", $urls);
+        $this->editSponsorsBannerCarouselForm = true;
+    }
+
+    public function resetEditSponsorsBannerCarouselFields()
+    {
+        $this->editSponsorsBannerCarouselForm = false;
+        $this->sponsors_banner_carousel_text = null;
+    }
+
+    public function editSponsorsBannerCarouselConfirmation()
+    {
+        $this->dispatchBrowserEvent('swal:confirmation', [
+            'type' => 'warning',
+            'message' => 'Are you sure?',
+            'text' => "",
+            'buttonConfirmText' => "Yes, update it!",
+            'livewireEmit' => "editSponsorsBannerCarouselConfirmed",
+        ]);
+    }
+
+    public function editSponsorsBannerCarousel()
+    {
+        $urls = collect(explode("\n", $this->sponsors_banner_carousel_text))
+            ->map(fn($url) => trim($url))
+            ->filter()
+            ->values()
+            ->toArray();
+
+        Events::where('id', $this->eventData['eventId'])->update([
+            'sponsors_banner_carousel' => $urls,
+        ]);
+
+        $this->eventData['eventDetails']['sponsors_banner_carousel'] = $urls;
+
+        $this->dispatchBrowserEvent('swal:success', [
+            'type' => 'success',
+            'message' => 'Sponsors banner carousel updated succesfully!',
+            'text' => "",
+        ]);
+
+        $this->resetEditSponsorsBannerCarouselFields();
+    }
+
+
+    public function toggleEventFeaturesVisibility()
+    {
+        Events::where('id', $this->eventData['eventId'])->update([
+            'show_event_features' => !$this->eventData['eventDetails']['show_event_features'],
+        ]);
+        $this->eventData['eventDetails']['show_event_features'] = !$this->eventData['eventDetails']['show_event_features'];
+    }
+
+    public function toggleSocialNetworkingsVisibility()
+    {
+        Events::where('id', $this->eventData['eventId'])->update([
+            'show_social_networkings' => !$this->eventData['eventDetails']['show_social_networkings'],
+        ]);
+        $this->eventData['eventDetails']['show_social_networkings'] = !$this->eventData['eventDetails']['show_social_networkings'];
+    }
+
+
+    public function showEditVerticalImagesSection()
+{
+    $urls = $this->eventData['eventDetails']['vertical_images_section'] ?? [];
+    $this->vertical_images_section_text = implode("\n", $urls);
+    $this->editVerticalImagesSectionForm = true;
+}
+
+public function resetEditVerticalImagesSectionFields()
+{
+    $this->editVerticalImagesSectionForm = false;
+    $this->vertical_images_section_text = null;
+}
+
+public function editVerticalImagesSectionConfirmation()
+{
+    $this->dispatchBrowserEvent('swal:confirmation', [
+        'type' => 'warning',
+        'message' => 'Are you sure?',
+        'text' => "",
+        'buttonConfirmText' => "Yes, update it!",
+        'livewireEmit' => "editVerticalImagesSectionConfirmed",
+    ]);
+}
+
+public function editVerticalImagesSection()
+{
+    $urls = collect(explode("\n", $this->vertical_images_section_text))
+        ->map(fn($url) => trim($url))
+        ->filter()
+        ->values()
+        ->toArray();
+
+    Events::where('id', $this->eventData['eventId'])->update([
+        'vertical_images_section' => $urls,
+    ]);
+
+    $this->eventData['eventDetails']['vertical_images_section'] = $urls;
+
+    $this->dispatchBrowserEvent('swal:success', [
+        'type' => 'success',
+        'message' => 'Vertical images section updated succesfully!',
+        'text' => "",
+    ]);
+
+    $this->resetEditVerticalImagesSectionFields();
+}
 }
