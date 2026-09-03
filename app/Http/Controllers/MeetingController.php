@@ -70,18 +70,17 @@ class MeetingController extends Controller
     public function apiAttendeeMeetingMetadata($apiCode, $eventCategory, $eventId, $attendeeId, $receiverId, $receiverType, $excludeMeetingId = null)
     {
         try {
-            if ($eventCategory !== 'AF') {
-                return $this->error([
-                    'locations' => [],
-                    'dates'     => [],
-                ], 'No date and locations available at the moment', 404);
-            }
+            // if ($eventCategory !== 'AF') {
+            //     return $this->error([
+            //         'locations' => [],
+            //         'dates'     => [],
+            //     ], 'No date and locations available at the moment', 404);
+            // }
 
             $rawDates = [
-                '2025-12-08',
-                '2025-12-09',
-                '2025-12-10',
-                '2025-12-11',
+                '2026-09-16',
+                '2026-09-17',
+
             ];
 
             $blockingStatuses = [MeetingStatus::ACCEPTED->value];
@@ -170,8 +169,8 @@ class MeetingController extends Controller
                 "Company Meeting room ",
                 "GPCA Stand",
                 "Registration Area",
-                "Plenary Area",
-                "Alberta Networking Lounge",
+                // "Plenary Area",
+                // "Alberta Networking Lounge",
             ];
 
             return $this->success([
