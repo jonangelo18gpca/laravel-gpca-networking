@@ -71,20 +71,28 @@ class AttendeeResetPasswordByAdmin extends Mailable
 
 
 
-    public function content()
+//     public function content()
+// {
+//     $year = (string) ($this->details['eventYear'] ?? '');
+//     $category = strtoupper($this->details['eventCategory'] ?? '');
+
+//     $allowedYears = ['2025', '2026'];
+//     $allowedCategories = ['ANC', 'RCC', 'RIC', 'AF'];
+
+//     if (in_array($year, $allowedYears) && in_array($category, $allowedCategories)) {
+//         // return new Content(
+//         //     markdown: "emails.$year." . strtolower($category) . ".attendee-reset-password-by-admin-mail",
+//         // );
+//     }
+
+//     return new Content(
+//         markdown: 'emails.attendee-reset-password-by-admin-mail',
+//     );
+// }
+
+
+public function content()
 {
-    $year = (string) ($this->details['eventYear'] ?? '');
-    $category = strtoupper($this->details['eventCategory'] ?? '');
-
-    $allowedYears = ['2025', '2026'];
-    $allowedCategories = ['ANC', 'RCC', 'RIC', 'AF'];
-
-    if (in_array($year, $allowedYears) && in_array($category, $allowedCategories)) {
-        return new Content(
-            markdown: "emails.$year." . strtolower($category) . ".attendee-reset-password-by-admin-mail",
-        );
-    }
-
     return new Content(
         markdown: 'emails.attendee-reset-password-by-admin-mail',
     );

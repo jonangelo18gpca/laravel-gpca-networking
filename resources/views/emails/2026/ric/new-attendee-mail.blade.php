@@ -10,7 +10,7 @@
 
 <p class="normal" style="margin-top: 15px;"><strong>Event Details:</strong></p>
 <p class="normal">Event Name: {{ $details['eventName'] }}</p>
-<p class="normal">Event Date: 18 May 2026 - 19 May 2026</p>
+<p class="normal">Event Date: 16 September 2026 - 17 September 2026</p>
 <p class="normal">Event Location: {{ $details['eventLocation'] }}</p>
 
 <p class="normal" style="margin-top: 15px;"><strong>How to activate your networking app account:</strong></p>
@@ -31,7 +31,7 @@
 
 <img src="https://gpca.org.ae/conferences/rcc/wp-content/uploads/2025/10/eRCC-mail-banner.png" alt="app" width="600" style="margin-top:25px;display:block;max-width:100%;width:100%;height:auto;border:0;outline:none;text-decoration:none;">
 
-<p class="normal" style="margin-top: 15px;">We look forward to welcoming you to Bahrain for the 8ᵗʰ GPCA Research & Innovation Conference. With the networking app at your fingertips, you’ll be fully equipped to maximize your time, build meaningful connections, and enjoy a seamless conference experience.</p>
+<p class="normal" style="margin-top: 15px;">We look forward to welcoming you to Saudi Arabia for the 8ᵗʰ GPCA Research & Innovation Conference. With the networking app at your fingertips, you’ll be fully equipped to maximize your time, build meaningful connections, and enjoy a seamless conference experience.</p>
 
 <p class="normal" style="margin-top: 15px;">Download the app now and get started today!</p>
 
