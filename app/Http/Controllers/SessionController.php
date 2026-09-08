@@ -210,64 +210,78 @@ class SessionController extends Controller
             }
             $uniqueDates = array_keys($storeDatesCategoryTemp);
 
-            if ($eventCategory == "SCC") {
-                $pdf = [
-                    [
-                        'title' => 'GPCA Gulf SQAS Workshop Agenda (PDF)',
-                        'url' => 'https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/GPCA-Gulf-SQAS-WS-Agenda-clean.pdf'
-                    ],
-                    [
-                        'title' => '16th GPCA Supply Chain Conference Agenda (PDF)',
-                        'url' => 'https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/16th-GPCA-Supply-Chain-Conference-Agenda_26May.pdf'
-                    ]
-                ];
-            } else if ($eventCategory == "ANC") {
-                $pdf = [
-                    [
-                        'title' => '15th GPCA Agri-Nutrients Conference Agenda (PDF)',
-                        'url' => 'https://gpca.org.ae/conferences/anc/wp-content/uploads/2025/09/15th-GPCA-Agri-Nutrients-Conference-Agenda_17Sep.pdf'
-                    ],
-                ];
-            } else if ($eventCategory == "RCC") {
-                $pdf = [
-                    [
-                        'title' => '6th GPCA Responsible Care Conference Agenda (PDF)',
-                        'url' => 'https://gpca.org.ae/conferences/rcc/wp-content/uploads/2025/10/6th-GPCA-Responsible-Care-Conference_Agenda_3Oct.pdf'
-                    ],
-                ];
-            } else if ($eventCategory == "AF") {
-                $pdf = [
-                    [
-                        'title' => '19th Annual GPCA Forum Agenda (PDF)',
-                        'url' => 'https://www.gpcaforum.com/wp-content/uploads/2025/12/19th-Annual-GPCA-Forum-Agenda_7Dec.pdf'
-                    ],
-                    [
-                        'title' => '4th GPCA Youth Forum Agenda (PDF)',
-                        'url' => 'https://www.gpcaforum.com/wp-content/uploads/2025/12/4th-GPCA-Youth-Forum-Agenda-Dec-8th-PDF.pdf'
-                    ],
-                    [
-                        'title' => 'GPCA Solutions XChange Agenda (PDF)',
-                        'url' => 'https://www.gpcaforum.com/wp-content/uploads/2025/12/GPCA-Solutions-XChange-Agenda_06Dec.pdf'
-                    ],
-                    [
-                        'title' => 'GPCA Startup Nexus Agenda (PDF)',
-                        'url' => 'https://www.gpcaforum.com/wp-content/uploads/2025/12/GPCA-Startup-Nexus-Agenda_7Dec.pdf'
-                    ],
-                    [
-                        'title' => 'GPCA Sustainability Pavilion Agenda (PDF)',
-                        'url' => 'https://www.gpcaforum.com/wp-content/uploads/2025/12/GPCA-Sustainability-Pavilion-Agenda_7Dec.pdf'
-                    ],
-                ];
-            } else if ($eventCategory == "RIC") {
-                $pdf = [
-                    [
-                        'title' => '19th Annual GPCA Forum Agenda (PDF)',
-                        'url' => 'https://gpcachem.org/wp-content/uploads/2026/03/8th-GPCA-RI-Conference-Agenda_25March.pdf'
-                    ],
+            // if ($eventCategory == "SCC") {
+            //     $pdf = [
+            //         [
+            //             'title' => 'GPCA Gulf SQAS Workshop Agenda (PDF)',
+            //             'url' => 'https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/GPCA-Gulf-SQAS-WS-Agenda-clean.pdf'
+            //         ],
+            //         [
+            //             'title' => '16th GPCA Supply Chain Conference Agenda (PDF)',
+            //             'url' => 'https://gpca.org.ae/conferences/scc/wp-content/uploads/2025/05/16th-GPCA-Supply-Chain-Conference-Agenda_26May.pdf'
+            //         ]
+            //     ];
+            // } else if ($eventCategory == "ANC") {
+            //     $pdf = [
+            //         [
+            //             'title' => '15th GPCA Agri-Nutrients Conference Agenda (PDF)',
+            //             'url' => 'https://gpca.org.ae/conferences/anc/wp-content/uploads/2025/09/15th-GPCA-Agri-Nutrients-Conference-Agenda_17Sep.pdf'
+            //         ],
+            //     ];
+            // } else if ($eventCategory == "RCC") {
+            //     $pdf = [
+            //         [
+            //             'title' => '6th GPCA Responsible Care Conference Agenda (PDF)',
+            //             'url' => 'https://gpca.org.ae/conferences/rcc/wp-content/uploads/2025/10/6th-GPCA-Responsible-Care-Conference_Agenda_3Oct.pdf'
+            //         ],
+            //     ];
+            // } else if ($eventCategory == "AF") {
+            //     $pdf = [
+            //         [
+            //             'title' => '19th Annual GPCA Forum Agenda (PDF)',
+            //             'url' => 'https://www.gpcaforum.com/wp-content/uploads/2025/12/19th-Annual-GPCA-Forum-Agenda_7Dec.pdf'
+            //         ],
+            //         [
+            //             'title' => '4th GPCA Youth Forum Agenda (PDF)',
+            //             'url' => 'https://www.gpcaforum.com/wp-content/uploads/2025/12/4th-GPCA-Youth-Forum-Agenda-Dec-8th-PDF.pdf'
+            //         ],
+            //         [
+            //             'title' => 'GPCA Solutions XChange Agenda (PDF)',
+            //             'url' => 'https://www.gpcaforum.com/wp-content/uploads/2025/12/GPCA-Solutions-XChange-Agenda_06Dec.pdf'
+            //         ],
+            //         [
+            //             'title' => 'GPCA Startup Nexus Agenda (PDF)',
+            //             'url' => 'https://www.gpcaforum.com/wp-content/uploads/2025/12/GPCA-Startup-Nexus-Agenda_7Dec.pdf'
+            //         ],
+            //         [
+            //             'title' => 'GPCA Sustainability Pavilion Agenda (PDF)',
+            //             'url' => 'https://www.gpcaforum.com/wp-content/uploads/2025/12/GPCA-Sustainability-Pavilion-Agenda_7Dec.pdf'
+            //         ],
+            //     ];
+            // } else if ($eventCategory == "RIC") {
+            //     $pdf = [
+            //         [
+            //             'title' => '19th Annual GPCA Forum Agenda (PDF)',
+            //             'url' => 'https://gpcachem.org/conferences/ric/wp-content/uploads/2026/05/8th-GPCA-Research-Innovation-Conference-Agenda_3-September.pdf'
+            //         ],
 
+            //     ];
+            // } else {
+            //     $pdf = [];
+            // }
+
+
+            $event = Event::where('id', $eventId)
+                ->where('category', $eventCategory)
+                ->first();
+
+            $pdf = [];
+
+            if ($event && !empty($event->agenda_url)) {
+                $pdf[] = [
+                    'title' => $event->agenda_title ?: 'Agenda (PDF)',
+                    'url' => $event->agenda_url,
                 ];
-            } else {
-                $pdf = [];
             }
 
             foreach ($uniqueDates as $uniqueDate) {
@@ -292,7 +306,7 @@ class SessionController extends Controller
                         } else {
                             $sessionEndTime = $session->end_time;
                         }
-                        
+
                         $finalCategory = "";
                         if ($session->feature_id == 0) {
                             $finalCategory = $session->event->short_name ?? '';

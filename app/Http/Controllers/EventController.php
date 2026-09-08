@@ -119,6 +119,8 @@ class EventController extends Controller
                     'is_accessible_in_the_app' => $event->is_accessible_in_the_app,
 
                     'year' => $event->year,
+                    'agenda_title' => $event->agenda_title,
+                    'agenda_url' => $event->agenda_url,
 
                     'sponsors_banner_carousel' => $event->sponsors_banner_carousel ?? [],
 
@@ -146,6 +148,8 @@ class EventController extends Controller
                     'press_releases_link' => $event->press_releases_link,
                     'slido_link' => $event->slido_link,
                     'shuttle_bus_schedule_link' => $event->shuttle_bus_schedule_link,
+
+
                 ],
                 "eventFloorPlanLinks" => [
                     'floor_plan_3d_image_link' => $event->floor_plan_3d_image_link,
@@ -286,7 +290,7 @@ class EventController extends Controller
 
                 if ($event->category == "AF") {
                     // $eventSplashScreenSecond = "https://www.gpcaforum.com/wp-content/uploads/2025/12/AF-side-table-screen_2_temp.png";
-                    $eventSplashScreenSecond = "https://www.gpcaforum.com/wp-content/uploads/2025/10/AF-splash-screen_2.jpg";
+                    // $eventSplashScreenSecond = "https://www.gpcaforum.com/wp-content/uploads/2025/10/AF-splash-screen_2.jpg";
                 } else {
                     $eventSplashScreenSecond = null;
                 }

@@ -185,6 +185,28 @@
             <p class="font-bold text-primaryColor">Shuttle Bus Schedule link: </p>
             <p>{{ $eventData['eventWebViewLinks']['shuttle_bus_schedule_link'] ?? 'N/A' }}</p>
         </div>
+
+<div class="flex gap-3 items-center mt-1">
+    <p class="font-bold text-primaryColor">Agenda title:</p>
+
+    <p>{{ $eventData['eventDetails']['agenda_title'] ?? 'N/A' }}</p>
+</div>
+
+<div class="flex gap-3 items-center mt-1">
+    <p class="font-bold text-primaryColor">Agenda PDF URL:</p>
+
+    @if (!empty($eventData['eventDetails']['agenda_url']))
+        <a
+            href="{{ $eventData['eventDetails']['agenda_url'] }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-blue-600 underline break-all">
+            {{ $eventData['eventDetails']['agenda_url'] }}
+        </a>
+    @else
+        <p>N/A</p>
+    @endif
+</div>
     </div>
 
     {{-- EVENT WEBVIEW LINKS --}}

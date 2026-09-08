@@ -28,7 +28,7 @@ class EventDetails extends Component
     public $editEventHTMLTextsForm;
 
     // EDIT WebView Links
-    public $delegate_feedback_survey_link, $app_feedback_survey_link, $about_event_link, $venue_link, $press_releases_link, $slido_link, $shuttle_bus_schedule_link;
+    public $delegate_feedback_survey_link, $app_feedback_survey_link, $about_event_link, $venue_link, $press_releases_link, $slido_link, $shuttle_bus_schedule_link, $agenda_title, $agenda_url;
     public $editEventWebViewLinksForm;
 
     // EDIT Floor Plan image Links
@@ -51,7 +51,7 @@ class EventDetails extends Component
     public $vertical_images_section_text;
     public $editVerticalImagesSectionForm = false;
 
-    protected $listeners = ['editEventDetailsConfirmed' => 'editEventDetails', 'editEventColorsConfirmed' => 'editEventColors', 'editEventHTMLTextsConfirmed' => 'editEventHTMLTexts', 'editEventWebViewLinksConfirmed' => 'editEventWebViewLinks', 'editEventFloorPlanLinksConfirmed' => 'editEventFloorPlanLinks', 'editEventAssetConfirmed' => 'editEventAsset', 'editSponsorsBannerCarouselConfirmed' => 'editSponsorsBannerCarousel','editVerticalImagesSectionConfirmed' => 'editVerticalImagesSection',];
+    protected $listeners = ['editEventDetailsConfirmed' => 'editEventDetails', 'editEventColorsConfirmed' => 'editEventColors', 'editEventHTMLTextsConfirmed' => 'editEventHTMLTexts', 'editEventWebViewLinksConfirmed' => 'editEventWebViewLinks', 'editEventFloorPlanLinksConfirmed' => 'editEventFloorPlanLinks', 'editEventAssetConfirmed' => 'editEventAsset', 'editSponsorsBannerCarouselConfirmed' => 'editSponsorsBannerCarousel', 'editVerticalImagesSectionConfirmed' => 'editVerticalImagesSection',];
 
     public function mount($eventData)
     {
@@ -335,6 +335,12 @@ class EventDetails extends Component
         $this->press_releases_link = $this->eventData['eventWebViewLinks']['press_releases_link'];
         $this->slido_link = $this->eventData['eventWebViewLinks']['slido_link'];
         $this->shuttle_bus_schedule_link = $this->eventData['eventWebViewLinks']['shuttle_bus_schedule_link'];
+        $this->agenda_title =
+            $this->eventData['eventDetails']['agenda_title'] ?? null;
+
+        $this->agenda_url =
+            $this->eventData['eventDetails']['agenda_url'] ?? null;
+
         $this->editEventWebViewLinksForm = true;
     }
 
@@ -347,10 +353,19 @@ class EventDetails extends Component
         $this->venue_link = null;
         $this->press_releases_link = null;
         $this->slido_link = null;
+        $this->shuttle_bus_schedule_link = null;
+        $this->agenda_title = null;
+        $this->agenda_url = null;
     }
 
     public function editEventWebViewLinksConfirmation()
     {
+
+        $this->validate([
+            'agenda_title' => 'nullable|string|max:255',
+            'agenda_url' => 'nullable|url|max:2048',
+        ]);
+
         $this->dispatchBrowserEvent('swal:confirmation', [
             'type' => 'warning',
             'message' => 'Are you sure?',
@@ -362,6 +377,9 @@ class EventDetails extends Component
 
     public function editEventWebViewLinks()
     {
+
+
+
         Events::where('id', $this->eventData['eventId'])->update([
             'delegate_feedback_survey_link' => $this->delegate_feedback_survey_link,
             'app_feedback_survey_link' => $this->app_feedback_survey_link,
@@ -370,7 +388,11 @@ class EventDetails extends Component
             'press_releases_link' => $this->press_releases_link,
             'slido_link' => $this->slido_link,
             'shuttle_bus_schedule_link' => $this->shuttle_bus_schedule_link,
+            'agenda_title' => $this->agenda_title,
+            'agenda_url' => $this->agenda_url,
+
         ]);
+
 
         $this->eventData['eventWebViewLinks']['delegate_feedback_survey_link'] = $this->delegate_feedback_survey_link;
         $this->eventData['eventWebViewLinks']['app_feedback_survey_link'] = $this->app_feedback_survey_link;
@@ -379,6 +401,8 @@ class EventDetails extends Component
         $this->eventData['eventWebViewLinks']['press_releases_link'] = $this->press_releases_link;
         $this->eventData['eventWebViewLinks']['slido_link'] = $this->slido_link;
         $this->eventData['eventWebViewLinks']['shuttle_bus_schedule_link'] = $this->shuttle_bus_schedule_link;
+        $this->eventData['eventDetails']['agenda_title'] = $this->agenda_title;
+        $this->eventData['eventDetails']['agenda_url'] = $this->agenda_url;
 
         $this->dispatchBrowserEvent('swal:success', [
             'type' => 'success',
@@ -874,49 +898,49 @@ class EventDetails extends Component
 
 
     public function showEditVerticalImagesSection()
-{
-    $urls = $this->eventData['eventDetails']['vertical_images_section'] ?? [];
-    $this->vertical_images_section_text = implode("\n", $urls);
-    $this->editVerticalImagesSectionForm = true;
-}
+    {
+        $urls = $this->eventData['eventDetails']['vertical_images_section'] ?? [];
+        $this->vertical_images_section_text = implode("\n", $urls);
+        $this->editVerticalImagesSectionForm = true;
+    }
 
-public function resetEditVerticalImagesSectionFields()
-{
-    $this->editVerticalImagesSectionForm = false;
-    $this->vertical_images_section_text = null;
-}
+    public function resetEditVerticalImagesSectionFields()
+    {
+        $this->editVerticalImagesSectionForm = false;
+        $this->vertical_images_section_text = null;
+    }
 
-public function editVerticalImagesSectionConfirmation()
-{
-    $this->dispatchBrowserEvent('swal:confirmation', [
-        'type' => 'warning',
-        'message' => 'Are you sure?',
-        'text' => "",
-        'buttonConfirmText' => "Yes, update it!",
-        'livewireEmit' => "editVerticalImagesSectionConfirmed",
-    ]);
-}
+    public function editVerticalImagesSectionConfirmation()
+    {
+        $this->dispatchBrowserEvent('swal:confirmation', [
+            'type' => 'warning',
+            'message' => 'Are you sure?',
+            'text' => "",
+            'buttonConfirmText' => "Yes, update it!",
+            'livewireEmit' => "editVerticalImagesSectionConfirmed",
+        ]);
+    }
 
-public function editVerticalImagesSection()
-{
-    $urls = collect(explode("\n", $this->vertical_images_section_text))
-        ->map(fn($url) => trim($url))
-        ->filter()
-        ->values()
-        ->toArray();
+    public function editVerticalImagesSection()
+    {
+        $urls = collect(explode("\n", $this->vertical_images_section_text))
+            ->map(fn($url) => trim($url))
+            ->filter()
+            ->values()
+            ->toArray();
 
-    Events::where('id', $this->eventData['eventId'])->update([
-        'vertical_images_section' => $urls,
-    ]);
+        Events::where('id', $this->eventData['eventId'])->update([
+            'vertical_images_section' => $urls,
+        ]);
 
-    $this->eventData['eventDetails']['vertical_images_section'] = $urls;
+        $this->eventData['eventDetails']['vertical_images_section'] = $urls;
 
-    $this->dispatchBrowserEvent('swal:success', [
-        'type' => 'success',
-        'message' => 'Vertical images section updated succesfully!',
-        'text' => "",
-    ]);
+        $this->dispatchBrowserEvent('swal:success', [
+            'type' => 'success',
+            'message' => 'Vertical images section updated succesfully!',
+            'text' => "",
+        ]);
 
-    $this->resetEditVerticalImagesSectionFields();
-}
+        $this->resetEditVerticalImagesSectionFields();
+    }
 }
