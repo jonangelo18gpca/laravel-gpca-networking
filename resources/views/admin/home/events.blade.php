@@ -19,7 +19,7 @@
             <span>Add Event</span>
         </a>
 
-        @if (count($finalEvents) > 0)
+        {{-- @if (count($finalEvents) > 0)
             <div class="mt-10 grid grid-cols-2 gap-5">
                 @foreach ($finalEvents as $event)
                     <a
@@ -48,7 +48,46 @@
                     </a>
                 @endforeach
             </div>
-        @endif
+        @endif --}}
+
+        @if (count($finalEvents) > 0)
+    <div class="mt-10 grid grid-cols-2 gap-5">
+        @foreach ($finalEvents as $event)
+            <a
+                href="{{ route('admin.event.dashboard.view', [
+                    'eventCategory' => $event['eventCategory'],
+                    'eventId' => $event['eventId'],
+                ]) }}">
+
+                <div
+                    class="bg-gray-100 px-4 py-4 rounded-lg hover:scale-110 hover:cursor-pointer hover:shadow-md duration-100">
+
+                    <div class="flex items-center gap-4">
+                        <img src="{{ $event['eventLogo'] }}" alt="" class="h-16">
+
+                        <p class="font-bold text-3xl">
+                            {{ $event['eventName'] }}
+                        </p>
+
+                        <p class="text-primaryColor rounded-full border border-primaryColor px-4 font-bold text-sm">
+                            {{ $event['eventCategory'] }}
+                        </p>
+                    </div>
+
+                    <div class="flex gap-3 items-center mt-5 text-primaryColor">
+                        <i class="fa-solid fa-location-dot"></i>
+                        <p>{{ $event['eventLocation'] }}</p>
+                    </div>
+
+                    <div class="flex gap-3 items-center mt-2 text-primaryColor">
+                        <i class="fa-solid fa-calendar-days"></i>
+                        <p>{{ $event['eventDate'] }}</p>
+                    </div>
+                </div>
+            </a>
+        @endforeach
+    </div>
+@endif
     </div>
 
     @if (count($finalEvents) < 1)

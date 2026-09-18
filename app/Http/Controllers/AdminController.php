@@ -8,31 +8,72 @@ use Illuminate\Support\Facades\Session;
 
 class AdminController extends Controller
 {
+    // public function loginView()
+    // {
+    //     if (Session::has('userType')) {
+    //         if (Session::get('userType') == 'gpcaAdmin') {
+    //             return redirect('/admin/dashboard');
+    //         }
+    //     }
+    //     return view('admin.login.login');
+    // }
+
     public function loginView()
-    {
-        if (Session::has('userType')) {
-            if (Session::get('userType') == 'gpcaAdmin') {
-                return redirect('/admin/dashboard');
-            }
-        }
-        return view('admin.login.login');
+{
+    if (in_array(Session::get('userType'), ['gpcaAdmin', 'editor'], true)) {
+        return redirect('/admin/dashboard');
     }
+
+    return view('admin.login.login');
+}
 
 
     // RENDER LOGICS
+    // public function login(Request $request)
+    // {
+    //     $request->validate([
+    //         'username' => 'required',
+    //         'password' => 'required'
+    //     ]);
+    //     if ($request->username == env('ADMIN_USERNAME') && $request->password == env('ADMIN_PASSWORD')) {
+    //         $request->session()->put('userType', 'gpcaAdmin');
+    //         return Redirect::to("/admin/event")->withSuccess('Welcome');
+    //     } else {
+    //         return Redirect::to("/admin/login")->withFail('Invalid username & password!');
+    //     }
+    // }
+
+
     public function login(Request $request)
-    {
-        $request->validate([
-            'username' => 'required',
-            'password' => 'required'
-        ]);
-        if ($request->username == env('ADMIN_USERNAME') && $request->password == env('ADMIN_PASSWORD')) {
-            $request->session()->put('userType', 'gpcaAdmin');
-            return Redirect::to("/admin/event")->withSuccess('Welcome');
-        } else {
-            return Redirect::to("/admin/login")->withFail('Invalid username & password!');
-        }
+{
+    $request->validate([
+        'username' => 'required',
+        'password' => 'required',
+    ]);
+
+    if (
+        $request->username === env('ADMIN_USERNAME') &&
+        $request->password === env('ADMIN_PASSWORD')
+    ) {
+        $request->session()->regenerate();
+        $request->session()->put('userType', 'gpcaAdmin');
+
+        return Redirect::to('/admin/dashboard')->withSuccess('Welcome');
     }
+
+    if (
+        $request->username === env('EDITOR_USERNAME') &&
+        $request->password === env('EDITOR_PASSWORD')
+    ) {
+        $request->session()->regenerate();
+        $request->session()->put('userType', 'editor');
+
+        return Redirect::to('/admin/dashboard')->withSuccess('Welcome');
+    }
+
+    return Redirect::to('/admin/login')
+        ->withFail('Invalid username & password!');
+}
 
     public function logout()
     {

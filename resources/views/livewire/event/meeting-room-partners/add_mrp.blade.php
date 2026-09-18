@@ -93,7 +93,7 @@
                     </div> --}}
 
 
-                    <div class="mt-5">
+                    {{-- <div class="mt-5">
     <div>
         <div class="text-primaryColor">
             Logo
@@ -129,8 +129,52 @@
             @enderror
         </div>
     </div>
-</div>
+</div> --}}
+      
+<div class="mt-5">
+    <div>
+        <div class="text-primaryColor">
+            Logo
+
+            <span class="text-xs text-gray-500">
+                @if (session('userType') === 'gpcaAdmin')
+                    (Paste URL or choose from Media Library)
+                @else
+                    (Paste image URL)
+                @endif
+            </span>
+        </div>
+
+        <div class="mt-2">
+            <div class="flex gap-5 items-center">
+                <input
+                    wire:model.lazy="image_placeholder_text"
+                    placeholder="Paste image URL, e.g. https://domain.com/logo.png"
+                    type="url"
+                    autocomplete="url"
+                    inputmode="url"
+                    class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
+
+                @if (session('userType') === 'gpcaAdmin')
+                    <button
+                        type="button"
+                        wire:click.prevent="chooseImage"
+                        class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-5 rounded items-center text-sm cursor-pointer">
+                        Choose
+                    </button>
+                @endif
+            </div>
+
+            @error('image_placeholder_text')
+                <div class="text-red-500 text-xs italic mt-1">
+                    {{ $message }}
                 </div>
+            @enderror
+        </div>
+    </div>
+</div>
+
+</div>
 
                 <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                     <button type="button"

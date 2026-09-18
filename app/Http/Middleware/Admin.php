@@ -8,20 +8,48 @@ use Illuminate\Support\Facades\Session;
 
 class Admin
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure(\Illuminate\Http\Request): (\Illuminate\Http\Response|\Illuminate\Http\RedirectResponse)  $next
-     * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
-     */
     public function handle(Request $request, Closure $next)
     {
-        if(Session::has('userType')){
-            if(Session::get('userType') == 'gpcaAdmin'){
-                return $next($request);
+        $userType = Session::get('userType');
+
+        if (!in_array($userType, ['gpcaAdmin', 'editor'], true)) {
+            return redirect('admin/login');
+        }
+
+        if ($userType === 'editor') {
+            $allowedPaths = [
+                'admin/dashboard',
+                'admin/event',
+
+                'admin/event/*/*/dashboard',
+
+
+                'admin/event/*/*/speaker',
+                'admin/event/*/*/speaker/*',
+
+                'admin/event/*/*/session',
+                'admin/event/*/*/session/*',
+
+                'admin/event/*/*/sponsor',
+                'admin/event/*/*/sponsor/*',
+
+                'admin/event/*/*/exhibitor',
+                'admin/event/*/*/exhibitor/*',
+
+                'admin/event/*/*/meeting-room-partner',
+                'admin/event/*/*/meeting-room-partner/*',
+
+                'admin/event/*/*/media-partner',
+                'admin/event/*/*/media-partner/*',
+
+                'admin/event/*/*/notification',
+            ];
+
+            if (!$request->is($allowedPaths)) {
+                abort(403, 'You do not have permission to access this page.');
             }
         }
-        return redirect('admin/login');
+
+        return $next($request);
     }
 }

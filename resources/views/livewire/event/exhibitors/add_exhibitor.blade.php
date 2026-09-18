@@ -83,9 +83,19 @@
                                     <input wire:model.lazy="image_placeholder_text"
                                         placeholder="Paste image URL, e.g. https://domain.com/logo.png" type="url"
                                         class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
-                                    <button type="button" wire:click.prevent="chooseImage"
+                                    {{-- <button type="button" wire:click.prevent="chooseImage"
                                         class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-5 rounded items-center text-sm cursor-pointer">Choose</button>
-                                </div>
+                               --}}
+                            
+                               @if (session('userType') === 'gpcaAdmin')
+    <button
+        type="button"
+        wire:click.prevent="chooseImage"
+        class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-5 rounded items-center text-sm cursor-pointer">
+        Choose
+    </button>
+@endif
+                            </div>
                                 @error('image_placeholder_text')
                                     <div class="text-red-500 text-xs italic mt-1">
                                         {{ $message }}
