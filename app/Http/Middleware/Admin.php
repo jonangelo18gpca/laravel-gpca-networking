@@ -43,6 +43,8 @@ class Admin
                 'admin/event/*/*/media-partner/*',
 
                 'admin/event/*/*/notification',
+
+                'admin/logout',
             ];
 
             if (!$request->is($allowedPaths)) {
