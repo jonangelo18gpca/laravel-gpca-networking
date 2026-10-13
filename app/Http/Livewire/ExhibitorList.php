@@ -9,6 +9,8 @@ use App\Models\Exhibitor as Exhibitors;
 use App\Models\Media as Medias;
 use Carbon\Carbon;
 use Livewire\Component;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class ExhibitorList extends Component
 {
@@ -30,40 +32,191 @@ class ExhibitorList extends Component
 
     protected $listeners = ['addExhibitorConfirmed' => 'addExhibitor', 'deleteExhibitorConfirmed' => 'deleteExhibitor'];
 
+    // public function mount($eventId, $eventCategory)
+    // {
+    //     $this->event = Events::where('id', $eventId)->where('category', $eventCategory)->first();
+
+    //     $exhibitors = Exhibitors::where('event_id', $eventId)->orderBy('datetime_added', 'ASC')->get();
+
+    //     if ($exhibitors->isNotEmpty()) {
+    //         foreach ($exhibitors as $exhibitor) {
+    //             array_push($this->finalListOfExhibitors, [
+    //                 'id' => $exhibitor->id,
+    //                 'name' => $exhibitor->name,
+    //                 'stand_number' => $exhibitor->stand_number,
+    //                 'website' => $exhibitor->website,
+    //                 'is_active' => $exhibitor->is_active,
+    //                 // 'logo' => Medias::where('id', $exhibitor->logo_media_id)->value('file_url'),
+    //                 'logo' => $exhibitor->logo_media_id
+    //                     ? Medias::where('id', $exhibitor->logo_media_id)->value('file_url')
+    //                     : null,
+    //                 'datetime_added' => Carbon::parse($exhibitor->datetime_added)->format('M j, Y g:i A'),
+    //             ]);
+    //         }
+    //     }
+
+    //     $this->inputNameVariableDateTime = "exhibitorDateTime";
+    //     $this->btnUpdateNameMethodDateTime = "editExhibitorDateTime";
+    //     $this->btnCancelNameMethodDateTime = "resetEditExhibitorDateTimeFields";
+
+    //     $this->addExhibitorForm = false;
+    //     $this->editExhibitorDateTimeForm = false;
+
+    //     $this->mediaFileList = getMediaFileList();
+    //     $this->chooseImageModal = false;
+    // }
+
+
     public function mount($eventId, $eventCategory)
-    {
-        $this->event = Events::where('id', $eventId)->where('category', $eventCategory)->first();
+{
+    $this->event = Events::where('id', $eventId)
+        ->where('category', $eventCategory)
+        ->firstOrFail();
 
-        $exhibitors = Exhibitors::where('event_id', $eventId)->orderBy('datetime_added', 'ASC')->get();
+    $this->inputNameVariableDateTime = "exhibitorDateTime";
+    $this->btnUpdateNameMethodDateTime = "editExhibitorDateTime";
+    $this->btnCancelNameMethodDateTime = "resetEditExhibitorDateTimeFields";
 
-        if ($exhibitors->isNotEmpty()) {
-            foreach ($exhibitors as $exhibitor) {
-                array_push($this->finalListOfExhibitors, [
-                    'id' => $exhibitor->id,
-                    'name' => $exhibitor->name,
-                    'stand_number' => $exhibitor->stand_number,
-                    'website' => $exhibitor->website,
-                    'is_active' => $exhibitor->is_active,
-                    // 'logo' => Medias::where('id', $exhibitor->logo_media_id)->value('file_url'),
-                    'logo' => $exhibitor->logo_media_id
-                        ? Medias::where('id', $exhibitor->logo_media_id)->value('file_url')
-                        : null,
-                    'datetime_added' => Carbon::parse($exhibitor->datetime_added)->format('M j, Y g:i A'),
-                ]);
+    $this->addExhibitorForm = false;
+    $this->editExhibitorDateTimeForm = false;
+
+    $this->mediaFileList = getMediaFileList();
+    $this->chooseImageModal = false;
+
+    $this->loadExhibitors();
+}
+
+
+private function loadExhibitors()
+{
+    $this->finalListOfExhibitors = [];
+
+    $exhibitors = Exhibitors::where('event_id', $this->event->id)
+        ->orderBy('datetime_added', 'ASC')
+        ->orderBy('id', 'ASC')
+        ->get();
+
+    foreach ($exhibitors as $exhibitor) {
+        $this->finalListOfExhibitors[] = [
+            'id' => $exhibitor->id,
+            'name' => $exhibitor->name,
+            'stand_number' => $exhibitor->stand_number,
+            'website' => $exhibitor->website,
+            'is_active' => $exhibitor->is_active,
+            'logo' => $exhibitor->logo_media_id
+                ? Medias::where('id', $exhibitor->logo_media_id)
+                    ->value('file_url')
+                : null,
+            'datetime_added' => Carbon::parse($exhibitor->datetime_added)
+                ->format('M j, Y g:i A'),
+        ];
+    }
+}
+
+
+public function reorderExhibitors($items)
+{
+    abort_unless(
+        session('userType') === 'gpcaAdmin',
+        403,
+        'Only GPCA administrators can reorder exhibitors.'
+    );
+
+    Validator::make(['items' => $items], [
+        'items' => 'required|array|min:1',
+        'items.*' => 'required|array',
+        'items.*.value' => 'required|integer|min:1|distinct',
+        'items.*.order' => 'required|integer|min:1|distinct',
+    ])->validate();
+
+    $orderedItems = collect($items)
+        ->sortBy('order')
+        ->values();
+
+    $positions = $orderedItems
+        ->pluck('order')
+        ->map(fn ($order) => (int) $order)
+        ->all();
+
+    abort_unless(
+        $positions === range(1, $orderedItems->count()),
+        422,
+        'Invalid exhibitor positions.'
+    );
+
+    $orderedIds = $orderedItems
+        ->pluck('value')
+        ->map(fn ($id) => (int) $id)
+        ->all();
+
+    DB::transaction(function () use ($orderedIds) {
+        $exhibitors = Exhibitors::where('event_id', $this->event->id)
+            ->orderBy('datetime_added', 'ASC')
+            ->orderBy('id', 'ASC')
+            ->lockForUpdate()
+            ->get();
+
+        $currentIds = $exhibitors
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->sort()
+            ->values()
+            ->all();
+
+        $submittedIds = collect($orderedIds)
+            ->sort()
+            ->values()
+            ->all();
+
+        abort_unless(
+            $currentIds === $submittedIds,
+            422,
+            'The exhibitor list has changed. Refresh the page and try again.'
+        );
+
+        $dateSlots = [];
+        $previousDate = null;
+
+        foreach ($exhibitors as $exhibitor) {
+            abort_if(
+                empty($exhibitor->datetime_added),
+                422,
+                'Each exhibitor must have a date before reordering.'
+            );
+
+            $date = Carbon::parse($exhibitor->datetime_added)
+                ->setMicrosecond(0);
+
+            if (
+                $previousDate &&
+                $date->lessThanOrEqualTo($previousDate)
+            ) {
+                $date = $previousDate->copy()->addSecond();
             }
+
+            $dateSlots[] = $date->format('Y-m-d H:i:s');
+            $previousDate = $date;
         }
 
-        $this->inputNameVariableDateTime = "exhibitorDateTime";
-        $this->btnUpdateNameMethodDateTime = "editExhibitorDateTime";
-        $this->btnCancelNameMethodDateTime = "resetEditExhibitorDateTimeFields";
+        foreach ($orderedIds as $index => $exhibitorId) {
+            Exhibitors::where('event_id', $this->event->id)
+                ->where('id', $exhibitorId)
+                ->update([
+                    'datetime_added' => $dateSlots[$index],
+                ]);
+        }
+    });
 
-        $this->addExhibitorForm = false;
-        $this->editExhibitorDateTimeForm = false;
+    $this->resetEditExhibitorDateTimeFields();
+    $this->activeDeleteIndex = null;
+    $this->loadExhibitors();
 
-        $this->mediaFileList = getMediaFileList();
-        $this->chooseImageModal = false;
-    }
-
+    $this->dispatchBrowserEvent('swal:success', [
+        'type' => 'success',
+        'message' => 'Exhibitor order updated successfully!',
+        'text' => '',
+    ]);
+}
     public function render()
     {
         return view('livewire.event.exhibitors.exhibitor-list');
@@ -168,13 +321,31 @@ class ExhibitorList extends Component
             $logoMediaId = $media->id;
         }
 
+        $lastExhibitorDate = Exhibitors::where('event_id', $this->event->id)
+    ->max('datetime_added');
+
+$newExhibitorDate = Carbon::now()->setMicrosecond(0);
+
+if (
+    $lastExhibitorDate &&
+    $newExhibitorDate->lessThanOrEqualTo(
+        Carbon::parse($lastExhibitorDate)
+    )
+) {
+    $newExhibitorDate = Carbon::parse($lastExhibitorDate)
+        ->setMicrosecond(0)
+        ->addSecond();
+}
+
+
         $newExhibitor = Exhibitors::create([
             'event_id' => $this->event->id,
             'name' => $this->name,
             'website' => $this->website,
             'stand_number' => $this->stand_number,
             'logo_media_id' => $logoMediaId,
-            'datetime_added' => Carbon::now(),
+            // 'datetime_added' => Carbon::now(),
+            'datetime_added' => $newExhibitorDate,
         ]);
 
         if ($logoMediaId) {
@@ -186,17 +357,19 @@ class ExhibitorList extends Component
             );
         }
 
-        array_push($this->finalListOfExhibitors, [
-            'id' => $newExhibitor->id,
-            'name' => $this->name,
-            'stand_number' => $this->stand_number,
-            'website' => $this->website,
-            'is_active' => true,
-            'logo' => $logoMediaId
-                ? Medias::where('id', $logoMediaId)->value('file_url')
-                : null,
-            'datetime_added' => Carbon::now()->format('M j, Y g:i A'),
-        ]);
+        // array_push($this->finalListOfExhibitors, [
+        //     'id' => $newExhibitor->id,
+        //     'name' => $this->name,
+        //     'stand_number' => $this->stand_number,
+        //     'website' => $this->website,
+        //     'is_active' => true,
+        //     'logo' => $logoMediaId
+        //         ? Medias::where('id', $logoMediaId)->value('file_url')
+        //         : null,
+        //     'datetime_added' => Carbon::now()->format('M j, Y g:i A'),
+        // ]);
+
+        $this->loadExhibitors();
 
         $this->resetAddExhibitorFields();
 
@@ -260,7 +433,11 @@ class ExhibitorList extends Component
     // EDIT DATETIME
     public function showEditExhibitorDateTime($exhibitorId, $exhibitorArrayIndex)
     {
-        $exhibitorDateTime = Exhibitors::where('id', $exhibitorId)->value('datetime_added');
+        // $exhibitorDateTime = Exhibitors::where('id', $exhibitorId)->value('datetime_added');
+
+        $exhibitorDateTime = Exhibitors::where('event_id', $this->event->id)
+    ->where('id', $exhibitorId)
+    ->value('datetime_added');
 
         $this->exhibitorId = $exhibitorId;
         $this->exhibitorDateTime = $exhibitorDateTime;
@@ -276,27 +453,49 @@ class ExhibitorList extends Component
         $this->exhibitorArrayIndex = null;
     }
 
-    public function editExhibitorDateTime()
-    {
-        $this->validate([
-            'exhibitorDateTime' => 'required',
-        ]);
+    // public function editExhibitorDateTime()
+    // {
+    //     $this->validate([
+    //         'exhibitorDateTime' => 'required',
+    //     ]);
 
-        Exhibitors::where('id', $this->exhibitorId)->update([
+    //     Exhibitors::where('id', $this->exhibitorId)->update([
+    //         'datetime_added' => $this->exhibitorDateTime,
+    //     ]);
+
+    //     $this->finalListOfExhibitors[$this->exhibitorArrayIndex]['datetime_added'] = Carbon::parse($this->exhibitorDateTime)->format('M j, Y g:i A');
+
+    //     $this->resetEditExhibitorDateTimeFields();
+
+    //     $this->dispatchBrowserEvent('swal:success', [
+    //         'type' => 'success',
+    //         'message' => 'Exhibitor Datetime updated successfully!',
+    //         'text' => ''
+    //     ]);
+    // }
+
+
+    public function editExhibitorDateTime()
+{
+    $this->validate([
+        'exhibitorDateTime' => 'required|date',
+    ]);
+
+    Exhibitors::where('event_id', $this->event->id)
+        ->where('id', $this->exhibitorId)
+        ->update([
             'datetime_added' => $this->exhibitorDateTime,
         ]);
 
-        $this->finalListOfExhibitors[$this->exhibitorArrayIndex]['datetime_added'] = Carbon::parse($this->exhibitorDateTime)->format('M j, Y g:i A');
+    $this->loadExhibitors();
+    $this->resetEditExhibitorDateTimeFields();
 
-        $this->resetEditExhibitorDateTimeFields();
-
-        $this->dispatchBrowserEvent('swal:success', [
-            'type' => 'success',
-            'message' => 'Exhibitor Datetime updated successfully!',
-            'text' => ''
-        ]);
-    }
-
+    $this->dispatchBrowserEvent('swal:success', [
+        'type' => 'success',
+        'message' => 'Exhibitor Datetime updated successfully!',
+        'text' => '',
+    ]);
+}
 
 
     public function deleteExhibitorConfirmation($index)

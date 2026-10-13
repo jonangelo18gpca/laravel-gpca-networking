@@ -9,6 +9,9 @@ use App\Models\Media as Medias;
 use App\Models\MediaPartner as MediaPartners;
 use Carbon\Carbon;
 use Livewire\Component;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+
 
 class MediaPartnerList extends Component
 {
@@ -30,34 +33,185 @@ class MediaPartnerList extends Component
 
     protected $listeners = ['addMediaPartnerConfirmed' => 'addMediaPartner', 'deleteMediaPartnerConfirmed' => 'deleteMediaParnter'];
 
-    public function mount($eventId, $eventCategory)
-    {
-        $this->event = Events::where('id', $eventId)->where('category', $eventCategory)->first();
+    // public function mount($eventId, $eventCategory)
+    // {
+    //     $this->event = Events::where('id', $eventId)->where('category', $eventCategory)->first();
 
-        $mediaPartners = MediaPartners::where('event_id', $eventId)->orderBy('datetime_added', 'ASC')->get();
-        if ($mediaPartners->isNotEmpty()) {
-            foreach ($mediaPartners as $mediaPartner) {
-                array_push($this->finalListOfMediaPartners, [
-                    'id' => $mediaPartner->id,
-                    'name' => $mediaPartner->name,
-                    'website' => $mediaPartner->website,
-                    'is_active' => $mediaPartner->is_active,
-                    'logo' => Medias::where('id', $mediaPartner->logo_media_id)->value('file_url'),
-                    'datetime_added' => Carbon::parse($mediaPartner->datetime_added)->format('M j, Y g:i A'),
-                ]);
+    //     $mediaPartners = MediaPartners::where('event_id', $eventId)->orderBy('datetime_added', 'ASC')->get();
+    //     if ($mediaPartners->isNotEmpty()) {
+    //         foreach ($mediaPartners as $mediaPartner) {
+    //             array_push($this->finalListOfMediaPartners, [
+    //                 'id' => $mediaPartner->id,
+    //                 'name' => $mediaPartner->name,
+    //                 'website' => $mediaPartner->website,
+    //                 'is_active' => $mediaPartner->is_active,
+    //                 'logo' => Medias::where('id', $mediaPartner->logo_media_id)->value('file_url'),
+    //                 'datetime_added' => Carbon::parse($mediaPartner->datetime_added)->format('M j, Y g:i A'),
+    //             ]);
+    //         }
+    //     }
+
+    //     $this->inputNameVariableDateTime = "mediaPartnerDateTime";
+    //     $this->btnUpdateNameMethodDateTime = "editMediaPartnerDateTime";
+    //     $this->btnCancelNameMethodDateTime = "resetEditMediaPartnerDateTimeFields";
+
+    //     $this->addMediaPartnerForm = false;
+    //     $this->editMediaPartnerDateTimeForm = false;
+
+    //     $this->mediaFileList = getMediaFileList();
+    //     $this->chooseImageModal = false;
+    // }
+
+
+    public function mount($eventId, $eventCategory)
+{
+    $this->event = Events::where('id', $eventId)
+        ->where('category', $eventCategory)
+        ->firstOrFail();
+
+    $this->inputNameVariableDateTime = "mediaPartnerDateTime";
+    $this->btnUpdateNameMethodDateTime = "editMediaPartnerDateTime";
+    $this->btnCancelNameMethodDateTime = "resetEditMediaPartnerDateTimeFields";
+
+    $this->addMediaPartnerForm = false;
+    $this->editMediaPartnerDateTimeForm = false;
+
+    $this->mediaFileList = getMediaFileList();
+    $this->chooseImageModal = false;
+
+    $this->loadMediaPartners();
+}
+
+
+private function loadMediaPartners()
+{
+    $this->finalListOfMediaPartners = [];
+
+    $mediaPartners = MediaPartners::where('event_id', $this->event->id)
+        ->orderBy('datetime_added', 'ASC')
+        ->orderBy('id', 'ASC')
+        ->get();
+
+    foreach ($mediaPartners as $mediaPartner) {
+        $this->finalListOfMediaPartners[] = [
+            'id' => $mediaPartner->id,
+            'name' => $mediaPartner->name,
+            'website' => $mediaPartner->website,
+            'is_active' => $mediaPartner->is_active,
+            'logo' => $mediaPartner->logo_media_id
+                ? Medias::where('id', $mediaPartner->logo_media_id)
+                    ->value('file_url')
+                : null,
+            'datetime_added' => Carbon::parse($mediaPartner->datetime_added)
+                ->format('M j, Y g:i A'),
+        ];
+    }
+}
+
+
+public function reorderMediaPartners($items)
+{
+    abort_unless(
+        session('userType') === 'gpcaAdmin',
+        403,
+        'Only GPCA administrators can reorder media partners.'
+    );
+
+    Validator::make(['items' => $items], [
+        'items' => 'required|array|min:1',
+        'items.*' => 'required|array',
+        'items.*.value' => 'required|integer|min:1|distinct',
+        'items.*.order' => 'required|integer|min:1|distinct',
+    ])->validate();
+
+    $orderedItems = collect($items)
+        ->sortBy('order')
+        ->values();
+
+    $positions = $orderedItems
+        ->pluck('order')
+        ->map(fn ($order) => (int) $order)
+        ->all();
+
+    abort_unless(
+        $positions === range(1, $orderedItems->count()),
+        422,
+        'Invalid media partner positions.'
+    );
+
+    $orderedIds = $orderedItems
+        ->pluck('value')
+        ->map(fn ($id) => (int) $id)
+        ->all();
+
+    DB::transaction(function () use ($orderedIds) {
+        $mediaPartners = MediaPartners::where('event_id', $this->event->id)
+            ->orderBy('datetime_added', 'ASC')
+            ->orderBy('id', 'ASC')
+            ->lockForUpdate()
+            ->get();
+
+        $currentIds = $mediaPartners
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->sort()
+            ->values()
+            ->all();
+
+        $submittedIds = collect($orderedIds)
+            ->sort()
+            ->values()
+            ->all();
+
+        abort_unless(
+            $currentIds === $submittedIds,
+            422,
+            'The media partner list has changed. Refresh the page and try again.'
+        );
+
+        $dateSlots = [];
+        $previousDate = null;
+
+        foreach ($mediaPartners as $mediaPartner) {
+            abort_if(
+                empty($mediaPartner->datetime_added),
+                422,
+                'Each media partner must have a date before reordering.'
+            );
+
+            $date = Carbon::parse($mediaPartner->datetime_added)
+                ->setMicrosecond(0);
+
+            if (
+                $previousDate &&
+                $date->lessThanOrEqualTo($previousDate)
+            ) {
+                $date = $previousDate->copy()->addSecond();
             }
+
+            $dateSlots[] = $date->format('Y-m-d H:i:s');
+            $previousDate = $date;
         }
 
-        $this->inputNameVariableDateTime = "mediaPartnerDateTime";
-        $this->btnUpdateNameMethodDateTime = "editMediaPartnerDateTime";
-        $this->btnCancelNameMethodDateTime = "resetEditMediaPartnerDateTimeFields";
+        foreach ($orderedIds as $index => $mediaPartnerId) {
+            MediaPartners::where('event_id', $this->event->id)
+                ->where('id', $mediaPartnerId)
+                ->update([
+                    'datetime_added' => $dateSlots[$index],
+                ]);
+        }
+    });
 
-        $this->addMediaPartnerForm = false;
-        $this->editMediaPartnerDateTimeForm = false;
+    $this->resetEditMediaPartnerDateTimeFields();
+    $this->activeDeleteIndex = null;
+    $this->loadMediaPartners();
 
-        $this->mediaFileList = getMediaFileList();
-        $this->chooseImageModal = false;
-    }
+    $this->dispatchBrowserEvent('swal:success', [
+        'type' => 'success',
+        'message' => 'Media partner order updated successfully!',
+        'text' => '',
+    ]);
+}
 
     public function render()
     {
@@ -172,12 +326,31 @@ public function addMediaPartner()
         $logoMediaId = $media->id;
     }
 
+    $lastMediaPartnerDate = MediaPartners::where(
+    'event_id',
+    $this->event->id
+)->max('datetime_added');
+
+$newMediaPartnerDate = Carbon::now()->setMicrosecond(0);
+
+if (
+    $lastMediaPartnerDate &&
+    $newMediaPartnerDate->lessThanOrEqualTo(
+        Carbon::parse($lastMediaPartnerDate)
+    )
+) {
+    $newMediaPartnerDate = Carbon::parse($lastMediaPartnerDate)
+        ->setMicrosecond(0)
+        ->addSecond();
+}
+
     $newMediaPartner = MediaPartners::create([
         'event_id' => $this->event->id,
         'name' => $this->name,
         'website' => $this->website,
         'logo_media_id' => $logoMediaId,
-        'datetime_added' => Carbon::now(),
+        // 'datetime_added' => Carbon::now(),
+        'datetime_added' => $newMediaPartnerDate,
     ]);
 
     if ($logoMediaId) {
@@ -189,16 +362,18 @@ public function addMediaPartner()
         );
     }
 
-    array_push($this->finalListOfMediaPartners, [
-        'id' => $newMediaPartner->id,
-        'name' => $this->name,
-        'website' => $this->website,
-        'is_active' => true,
-        'logo' => $logoMediaId
-            ? Medias::where('id', $logoMediaId)->value('file_url')
-            : null,
-        'datetime_added' => Carbon::now()->format('M j, Y g:i A'),
-    ]);
+    $this->loadMediaPartners();
+    
+    // array_push($this->finalListOfMediaPartners, [
+    //     'id' => $newMediaPartner->id,
+    //     'name' => $this->name,
+    //     'website' => $this->website,
+    //     'is_active' => true,
+    //     'logo' => $logoMediaId
+    //         ? Medias::where('id', $logoMediaId)->value('file_url')
+    //         : null,
+    //     'datetime_added' => Carbon::now()->format('M j, Y g:i A'),
+    // ]);
 
     $this->resetAddMediaPartnerFields();
 
@@ -256,15 +431,32 @@ public function addMediaPartner()
 
 
     // EDIT DATETIME
-    public function showEditMediaPartnerDateTime($mediaPartnerId, $mediaPartnerArrayIndex)
-    {
-        $mediaPartnerDateTime = MediaPartners::where('id', $mediaPartnerId)->value('datetime_added');
+    // public function showEditMediaPartnerDateTime($mediaPartnerId, $mediaPartnerArrayIndex)
+    // {
+    //     $mediaPartnerDateTime = MediaPartners::where('id', $mediaPartnerId)->value('datetime_added');
 
-        $this->mediaPartnerId = $mediaPartnerId;
-        $this->mediaPartnerDateTime = $mediaPartnerDateTime;
-        $this->mediaPartnerArrayIndex = $mediaPartnerArrayIndex;
-        $this->editMediaPartnerDateTimeForm = true;
-    }
+    //     $this->mediaPartnerId = $mediaPartnerId;
+    //     $this->mediaPartnerDateTime = $mediaPartnerDateTime;
+    //     $this->mediaPartnerArrayIndex = $mediaPartnerArrayIndex;
+    //     $this->editMediaPartnerDateTimeForm = true;
+    // }
+
+    public function showEditMediaPartnerDateTime(
+    $mediaPartnerId,
+    $mediaPartnerArrayIndex
+) {
+    $mediaPartnerDateTime = MediaPartners::where(
+        'event_id',
+        $this->event->id
+    )
+        ->where('id', $mediaPartnerId)
+        ->value('datetime_added');
+
+    $this->mediaPartnerId = $mediaPartnerId;
+    $this->mediaPartnerDateTime = $mediaPartnerDateTime;
+    $this->mediaPartnerArrayIndex = $mediaPartnerArrayIndex;
+    $this->editMediaPartnerDateTimeForm = true;
+}
 
     public function resetEditMediaPartnerDateTimeFields()
     {
@@ -274,26 +466,49 @@ public function addMediaPartner()
         $this->mediaPartnerArrayIndex = null;
     }
 
-    public function editMediaPartnerDateTime()
-    {
-        $this->validate([
-            'mediaPartnerDateTime' => 'required',
-        ]);
+    // public function editMediaPartnerDateTime()
+    // {
+    //     $this->validate([
+    //         'mediaPartnerDateTime' => 'required',
+    //     ]);
 
-        MediaPartners::where('id', $this->mediaPartnerId)->update([
+    //     MediaPartners::where('id', $this->mediaPartnerId)->update([
+    //         'datetime_added' => $this->mediaPartnerDateTime,
+    //     ]);
+
+    //     $this->finalListOfMediaPartners[$this->mediaPartnerArrayIndex]['datetime_added'] = Carbon::parse($this->mediaPartnerDateTime)->format('M j, Y g:i A');
+
+    //     $this->resetEditMediaPartnerDateTimeFields();
+
+    //     $this->dispatchBrowserEvent('swal:success', [
+    //         'type' => 'success',
+    //         'message' => 'Media Partner Datetime updated successfully!',
+    //         'text' => ''
+    //     ]);
+    // }
+
+
+    public function editMediaPartnerDateTime()
+{
+    $this->validate([
+        'mediaPartnerDateTime' => 'required|date',
+    ]);
+
+    MediaPartners::where('event_id', $this->event->id)
+        ->where('id', $this->mediaPartnerId)
+        ->update([
             'datetime_added' => $this->mediaPartnerDateTime,
         ]);
 
-        $this->finalListOfMediaPartners[$this->mediaPartnerArrayIndex]['datetime_added'] = Carbon::parse($this->mediaPartnerDateTime)->format('M j, Y g:i A');
+    $this->loadMediaPartners();
+    $this->resetEditMediaPartnerDateTimeFields();
 
-        $this->resetEditMediaPartnerDateTimeFields();
-
-        $this->dispatchBrowserEvent('swal:success', [
-            'type' => 'success',
-            'message' => 'Media Partner Datetime updated successfully!',
-            'text' => ''
-        ]);
-    }
+    $this->dispatchBrowserEvent('swal:success', [
+        'type' => 'success',
+        'message' => 'Media partner datetime updated successfully!',
+        'text' => '',
+    ]);
+}
 
     public function deleteMediaParnterConfirmation($index)
     {

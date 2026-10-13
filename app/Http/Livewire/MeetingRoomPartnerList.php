@@ -9,6 +9,8 @@ use App\Models\Media as Medias;
 use App\Models\MeetingRoomPartner as MeetingRoomPartners;
 use Carbon\Carbon;
 use Livewire\Component;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class MeetingRoomPartnerList extends Component
 {
@@ -30,25 +32,43 @@ class MeetingRoomPartnerList extends Component
 
     protected $listeners = ['addMeetingRoomPartnerConfirmed' => 'addMeetingRoomPartner', 'deleteMeetingRoomPartnerConfirmed' => 'deleteMeetingRoomPartner'];
 
+    // public function mount($eventId, $eventCategory)
+    // {
+    //     $this->event = Events::where('id', $eventId)->where('category', $eventCategory)->first();
+
+    //     $meetingRoomPartners = MeetingRoomPartners::where('event_id', $eventId)->orderBy('datetime_added', 'ASC')->get();
+
+    //     if ($meetingRoomPartners->isNotEmpty()) {
+    //         foreach ($meetingRoomPartners as $meetingRoomPartner) {
+    //             array_push($this->finalListOfMeetingRoomPartners, [
+    //                 'id' => $meetingRoomPartner->id,
+    //                 'name' => $meetingRoomPartner->name,
+    //                 'location' => $meetingRoomPartner->location,
+    //                 'website' => $meetingRoomPartner->website,
+    //                 'is_active' => $meetingRoomPartner->is_active,
+    //                 'logo' => Medias::where('id', $meetingRoomPartner->logo_media_id)->value('file_url'),
+    //                 'datetime_added' => Carbon::parse($meetingRoomPartner->datetime_added)->format('M j, Y g:i A'),
+    //             ]);
+    //         }
+    //     }
+
+    //     $this->inputNameVariableDateTime = "meetingRoomPartnerDateTime";
+    //     $this->btnUpdateNameMethodDateTime = "editMeetingRoomPartnerDateTime";
+    //     $this->btnCancelNameMethodDateTime = "resetEditMeetingRoomPartnerDateTimeFields";
+
+    //     $this->addMeetingRoomPartnerForm = false;
+    //     $this->editMeetingRoomPartnerDateTimeForm = false;
+
+    //     $this->mediaFileList = getMediaFileList();
+    //     $this->chooseImageModal = false;
+    // }
+
+
     public function mount($eventId, $eventCategory)
     {
-        $this->event = Events::where('id', $eventId)->where('category', $eventCategory)->first();
-
-        $meetingRoomPartners = MeetingRoomPartners::where('event_id', $eventId)->orderBy('datetime_added', 'ASC')->get();
-
-        if ($meetingRoomPartners->isNotEmpty()) {
-            foreach ($meetingRoomPartners as $meetingRoomPartner) {
-                array_push($this->finalListOfMeetingRoomPartners, [
-                    'id' => $meetingRoomPartner->id,
-                    'name' => $meetingRoomPartner->name,
-                    'location' => $meetingRoomPartner->location,
-                    'website' => $meetingRoomPartner->website,
-                    'is_active' => $meetingRoomPartner->is_active,
-                    'logo' => Medias::where('id', $meetingRoomPartner->logo_media_id)->value('file_url'),
-                    'datetime_added' => Carbon::parse($meetingRoomPartner->datetime_added)->format('M j, Y g:i A'),
-                ]);
-            }
-        }
+        $this->event = Events::where('id', $eventId)
+            ->where('category', $eventCategory)
+            ->firstOrFail();
 
         $this->inputNameVariableDateTime = "meetingRoomPartnerDateTime";
         $this->btnUpdateNameMethodDateTime = "editMeetingRoomPartnerDateTime";
@@ -56,16 +76,158 @@ class MeetingRoomPartnerList extends Component
 
         $this->addMeetingRoomPartnerForm = false;
         $this->editMeetingRoomPartnerDateTimeForm = false;
-        
+
         $this->mediaFileList = getMediaFileList();
         $this->chooseImageModal = false;
+
+        $this->loadMeetingRoomPartners();
     }
+
+
+    private function loadMeetingRoomPartners()
+    {
+        $this->finalListOfMeetingRoomPartners = [];
+
+        $meetingRoomPartners = MeetingRoomPartners::where(
+            'event_id',
+            $this->event->id
+        )
+            ->orderBy('datetime_added', 'ASC')
+            ->orderBy('id', 'ASC')
+            ->get();
+
+        foreach ($meetingRoomPartners as $meetingRoomPartner) {
+            $this->finalListOfMeetingRoomPartners[] = [
+                'id' => $meetingRoomPartner->id,
+                'name' => $meetingRoomPartner->name,
+                'location' => $meetingRoomPartner->location,
+                'website' => $meetingRoomPartner->website,
+                'is_active' => $meetingRoomPartner->is_active,
+                'logo' => $meetingRoomPartner->logo_media_id
+                    ? Medias::where('id', $meetingRoomPartner->logo_media_id)
+                    ->value('file_url')
+                    : null,
+                'datetime_added' => Carbon::parse(
+                    $meetingRoomPartner->datetime_added
+                )->format('M j, Y g:i A'),
+            ];
+        }
+    }
+
+    public function reorderMeetingRoomPartners($items)
+    {
+        abort_unless(
+            session('userType') === 'gpcaAdmin',
+            403,
+            'Only GPCA administrators can reorder meeting room partners.'
+        );
+
+        Validator::make(['items' => $items], [
+            'items' => 'required|array|min:1',
+            'items.*' => 'required|array',
+            'items.*.value' => 'required|integer|min:1|distinct',
+            'items.*.order' => 'required|integer|min:1|distinct',
+        ])->validate();
+
+        $orderedItems = collect($items)
+            ->sortBy('order')
+            ->values();
+
+        $positions = $orderedItems
+            ->pluck('order')
+            ->map(fn($order) => (int) $order)
+            ->all();
+
+        abort_unless(
+            $positions === range(1, $orderedItems->count()),
+            422,
+            'Invalid meeting room partner positions.'
+        );
+
+        $orderedIds = $orderedItems
+            ->pluck('value')
+            ->map(fn($id) => (int) $id)
+            ->all();
+
+        DB::transaction(function () use ($orderedIds) {
+            $meetingRoomPartners = MeetingRoomPartners::where(
+                'event_id',
+                $this->event->id
+            )
+                ->orderBy('datetime_added', 'ASC')
+                ->orderBy('id', 'ASC')
+                ->lockForUpdate()
+                ->get();
+
+            $currentIds = $meetingRoomPartners
+                ->pluck('id')
+                ->map(fn($id) => (int) $id)
+                ->sort()
+                ->values()
+                ->all();
+
+            $submittedIds = collect($orderedIds)
+                ->sort()
+                ->values()
+                ->all();
+
+            abort_unless(
+                $currentIds === $submittedIds,
+                422,
+                'The meeting room partner list has changed. Refresh the page and try again.'
+            );
+
+            $dateSlots = [];
+            $previousDate = null;
+
+            foreach ($meetingRoomPartners as $meetingRoomPartner) {
+                abort_if(
+                    empty($meetingRoomPartner->datetime_added),
+                    422,
+                    'Each meeting room partner must have a date before reordering.'
+                );
+
+                $date = Carbon::parse($meetingRoomPartner->datetime_added)
+                    ->setMicrosecond(0);
+
+                if (
+                    $previousDate &&
+                    $date->lessThanOrEqualTo($previousDate)
+                ) {
+                    $date = $previousDate->copy()->addSecond();
+                }
+
+                $dateSlots[] = $date->format('Y-m-d H:i:s');
+                $previousDate = $date;
+            }
+
+            foreach ($orderedIds as $index => $meetingRoomPartnerId) {
+                MeetingRoomPartners::where('event_id', $this->event->id)
+                    ->where('id', $meetingRoomPartnerId)
+                    ->update([
+                        'datetime_added' => $dateSlots[$index],
+                    ]);
+            }
+        });
+
+        $this->resetEditMeetingRoomPartnerDateTimeFields();
+        $this->activeDeleteIndex = null;
+        $this->loadMeetingRoomPartners();
+
+        $this->dispatchBrowserEvent('swal:success', [
+            'type' => 'success',
+            'message' => 'Meeting room partner order updated successfully!',
+            'text' => '',
+        ]);
+    }
+
+
 
     public function render()
     {
         return view('livewire.event.meeting-room-partners.meeting-room-partner-list');
     }
-    
+
     public function showAddMeetingRoomPartner()
     {
         $this->addMeetingRoomPartnerForm = true;
@@ -88,21 +250,21 @@ class MeetingRoomPartnerList extends Component
 
 
     public function addMeetingRoomPartnerConfirmation()
-{
-    $this->validate([
-        'name' => 'required',
-        'image_media_id' => 'nullable|exists:medias,id',
-        'image_placeholder_text' => 'nullable|required_without:image_media_id|url|max:2048',
-    ]);
+    {
+        $this->validate([
+            'name' => 'required',
+            'image_media_id' => 'nullable|exists:medias,id',
+            'image_placeholder_text' => 'nullable|required_without:image_media_id|url|max:2048',
+        ]);
 
-    $this->dispatchBrowserEvent('swal:confirmation', [
-        'type' => 'warning',
-        'message' => 'Are you sure?',
-        'text' => '',
-        'buttonConfirmText' => 'Yes, add it!',
-        'livewireEmit' => 'addMeetingRoomPartnerConfirmed',
-    ]);
-}
+        $this->dispatchBrowserEvent('swal:confirmation', [
+            'type' => 'warning',
+            'message' => 'Are you sure?',
+            'text' => '',
+            'buttonConfirmText' => 'Yes, add it!',
+            'livewireEmit' => 'addMeetingRoomPartnerConfirmed',
+        ]);
+    }
 
 
     public function resetAddMeetingRoomPartnerFields()
@@ -133,7 +295,7 @@ class MeetingRoomPartnerList extends Component
     //             $newMeetingRoomPartner->id,
     //         );
     //     }
-        
+
     //     array_push($this->finalListOfMeetingRoomPartners, [
     //         'id' => $newMeetingRoomPartner->id,
     //         'name' => $this->name,
@@ -155,70 +317,92 @@ class MeetingRoomPartnerList extends Component
 
 
     public function addMeetingRoomPartner()
-{
-    $logoMediaId = $this->image_media_id;
+    {
+        $logoMediaId = $this->image_media_id;
 
-    if (!$logoMediaId && !empty($this->image_placeholder_text)) {
-        $imageUrl = trim($this->image_placeholder_text);
+        if (!$logoMediaId && !empty($this->image_placeholder_text)) {
+            $imageUrl = trim($this->image_placeholder_text);
 
-        $path = parse_url($imageUrl, PHP_URL_PATH);
-        $fileName = basename($path) ?: 'meeting-room-partner-logo';
-        $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            $path = parse_url($imageUrl, PHP_URL_PATH);
+            $fileName = basename($path) ?: 'meeting-room-partner-logo';
+            $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 
-        $media = Medias::create([
-            'file_url' => $imageUrl,
-            'file_directory' => 'external-url',
-            'file_name' => $fileName,
-            'file_type' => $extension ?: 'image',
-            'file_size' => 0,
-            'width' => 0,
-            'height' => 0,
-            'date_uploaded' => Carbon::now(),
-        ]);
+            $media = Medias::create([
+                'file_url' => $imageUrl,
+                'file_directory' => 'external-url',
+                'file_name' => $fileName,
+                'file_type' => $extension ?: 'image',
+                'file_size' => 0,
+                'width' => 0,
+                'height' => 0,
+                'date_uploaded' => Carbon::now(),
+            ]);
 
-        $logoMediaId = $media->id;
-    }
+            $logoMediaId = $media->id;
+        }
 
-    $newMeetingRoomPartner = MeetingRoomPartners::create([
-        'event_id' => $this->event->id,
-        'name' => $this->name,
-        'website' => $this->website,
-        'location' => $this->location,
-        'logo_media_id' => $logoMediaId,
-        'datetime_added' => Carbon::now(),
-    ]);
 
-    if ($logoMediaId) {
-        mediaUsageUpdate(
-            MediaUsageUpdateTypes::ADD_ONLY->value,
-            $logoMediaId,
-            MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value,
-            $newMeetingRoomPartner->id,
-        );
-    }
+        $lastPartnerDate = MeetingRoomPartners::where(
+    'event_id',
+    $this->event->id
+)->max('datetime_added');
 
-    array_push($this->finalListOfMeetingRoomPartners, [
-        'id' => $newMeetingRoomPartner->id,
-        'name' => $this->name,
-        'location' => $this->location,
-        'website' => $this->website,
-        'is_active' => true,
-        'logo' => $logoMediaId
-            ? Medias::where('id', $logoMediaId)->value('file_url')
-            : null,
-        'datetime_added' => Carbon::now()->format('M j, Y g:i A'),
-    ]);
+$newPartnerDate = Carbon::now()->setMicrosecond(0);
 
-    $this->resetAddMeetingRoomPartnerFields();
-
-    $this->dispatchBrowserEvent('swal:success', [
-        'type' => 'success',
-        'message' => 'Meeting room partner added successfully!',
-        'text' => '',
-    ]);
+if (
+    $lastPartnerDate &&
+    $newPartnerDate->lessThanOrEqualTo(Carbon::parse($lastPartnerDate))
+) {
+    $newPartnerDate = Carbon::parse($lastPartnerDate)
+        ->setMicrosecond(0)
+        ->addSecond();
 }
 
-    
+
+
+        $newMeetingRoomPartner = MeetingRoomPartners::create([
+            'event_id' => $this->event->id,
+            'name' => $this->name,
+            'website' => $this->website,
+            'location' => $this->location,
+            'logo_media_id' => $logoMediaId,
+            // 'datetime_added' => Carbon::now(),
+            'datetime_added' => $newPartnerDate,
+        ]);
+
+        if ($logoMediaId) {
+            mediaUsageUpdate(
+                MediaUsageUpdateTypes::ADD_ONLY->value,
+                $logoMediaId,
+                MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value,
+                $newMeetingRoomPartner->id,
+            );
+        }
+
+        // array_push($this->finalListOfMeetingRoomPartners, [
+        //     'id' => $newMeetingRoomPartner->id,
+        //     'name' => $this->name,
+        //     'location' => $this->location,
+        //     'website' => $this->website,
+        //     'is_active' => true,
+        //     'logo' => $logoMediaId
+        //         ? Medias::where('id', $logoMediaId)->value('file_url')
+        //         : null,
+        //     'datetime_added' => Carbon::now()->format('M j, Y g:i A'),
+        // ]);
+
+        $this->loadMeetingRoomPartners();
+        
+        $this->resetAddMeetingRoomPartnerFields();
+
+        $this->dispatchBrowserEvent('swal:success', [
+            'type' => 'success',
+            'message' => 'Meeting room partner added successfully!',
+            'text' => '',
+        ]);
+    }
+
+
 
     // FOR CHOOSING IMAGE MODAL
     public function chooseImage()
@@ -254,8 +438,9 @@ class MeetingRoomPartnerList extends Component
     }
 
 
-    
-    public function updateMeetingRoomPartnerStatus($arrayIndex){
+
+    public function updateMeetingRoomPartnerStatus($arrayIndex)
+    {
         MeetingRoomPartners::where('id', $this->finalListOfMeetingRoomPartners[$arrayIndex]['id'])->update([
             'is_active' => !$this->finalListOfMeetingRoomPartners[$arrayIndex]['is_active'],
         ]);
@@ -268,7 +453,20 @@ class MeetingRoomPartnerList extends Component
     // EDIT DATETIME
     public function showEditMeetingRoomPartnerDateTime($meetingRoomPartnerId, $meetingRoomPartnerArrayIndex)
     {
-        $meetingRoomPartnerDateTime = MeetingRoomPartners::where('id', $meetingRoomPartnerId)->value('datetime_added');
+        // $meetingRoomPartnerDateTime = MeetingRoomPartners::where('id', $meetingRoomPartnerId)->value('datetime_added');
+
+        // $this->meetingRoomPartnerId = $meetingRoomPartnerId;
+        // $this->meetingRoomPartnerDateTime = $meetingRoomPartnerDateTime;
+        // $this->meetingRoomPartnerArrayIndex = $meetingRoomPartnerArrayIndex;
+        // $this->editMeetingRoomPartnerDateTimeForm = true;
+
+
+        $meetingRoomPartnerDateTime = MeetingRoomPartners::where(
+            'event_id',
+            $this->event->id
+        )
+            ->where('id', $meetingRoomPartnerId)
+            ->value('datetime_added');
 
         $this->meetingRoomPartnerId = $meetingRoomPartnerId;
         $this->meetingRoomPartnerDateTime = $meetingRoomPartnerDateTime;
@@ -283,27 +481,49 @@ class MeetingRoomPartnerList extends Component
         $this->meetingRoomPartnerDateTime = null;
         $this->meetingRoomPartnerArrayIndex = null;
     }
-    
-    public function editMeetingRoomPartnerDateTime()
-    {
-        $this->validate([
-            'meetingRoomPartnerDateTime' => 'required',
-        ]);
 
-        MeetingRoomPartners::where('id', $this->meetingRoomPartnerId)->update([
+    // public function editMeetingRoomPartnerDateTime()
+    // {
+    //     $this->validate([
+    //         'meetingRoomPartnerDateTime' => 'required',
+    //     ]);
+
+    //     MeetingRoomPartners::where('id', $this->meetingRoomPartnerId)->update([
+    //         'datetime_added' => $this->meetingRoomPartnerDateTime,
+    //     ]);
+
+    //     $this->finalListOfMeetingRoomPartners[$this->meetingRoomPartnerArrayIndex]['datetime_added'] = Carbon::parse($this->meetingRoomPartnerDateTime)->format('M j, Y g:i A');
+
+    //     $this->resetEditMeetingRoomPartnerDateTimeFields();
+
+    //     $this->dispatchBrowserEvent('swal:success', [
+    //         'type' => 'success',
+    //         'message' => 'Media Partner Datetime updated successfully!',
+    //         'text' => ''
+    //     ]);
+    // }
+
+    public function editMeetingRoomPartnerDateTime()
+{
+    $this->validate([
+        'meetingRoomPartnerDateTime' => 'required|date',
+    ]);
+
+    MeetingRoomPartners::where('event_id', $this->event->id)
+        ->where('id', $this->meetingRoomPartnerId)
+        ->update([
             'datetime_added' => $this->meetingRoomPartnerDateTime,
         ]);
 
-        $this->finalListOfMeetingRoomPartners[$this->meetingRoomPartnerArrayIndex]['datetime_added'] = Carbon::parse($this->meetingRoomPartnerDateTime)->format('M j, Y g:i A');
+    $this->loadMeetingRoomPartners();
+    $this->resetEditMeetingRoomPartnerDateTimeFields();
 
-        $this->resetEditMeetingRoomPartnerDateTimeFields();
-
-        $this->dispatchBrowserEvent('swal:success', [
-            'type' => 'success',
-            'message' => 'Media Partner Datetime updated successfully!',
-            'text' => ''
-        ]);
-    }
+    $this->dispatchBrowserEvent('swal:success', [
+        'type' => 'success',
+        'message' => 'Meeting room partner datetime updated successfully!',
+        'text' => '',
+    ]);
+}
 
 
     public function deleteMeetingRoomPartnerConfirmation($index)
@@ -322,8 +542,8 @@ class MeetingRoomPartnerList extends Component
     {
         $meetingRoomPartner = MeetingRoomPartners::where('id', $this->finalListOfMeetingRoomPartners[$this->activeDeleteIndex]['id'])->first();
 
-        if($meetingRoomPartner){
-            if($meetingRoomPartner->logo_media_id){
+        if ($meetingRoomPartner) {
+            if ($meetingRoomPartner->logo_media_id) {
                 mediaUsageUpdate(
                     MediaUsageUpdateTypes::REMOVED_ONLY->value,
                     $meetingRoomPartner->logo_media_id,
@@ -333,7 +553,7 @@ class MeetingRoomPartnerList extends Component
                 );
             }
 
-            if($meetingRoomPartner->banner_media_id){
+            if ($meetingRoomPartner->banner_media_id) {
                 mediaUsageUpdate(
                     MediaUsageUpdateTypes::REMOVED_ONLY->value,
                     $meetingRoomPartner->banner_media_id,
@@ -348,7 +568,7 @@ class MeetingRoomPartnerList extends Component
             unset($this->finalListOfMeetingRoomPartners[$this->activeDeleteIndex]);
             $this->finalListOfMeetingRoomPartners = array_values($this->finalListOfMeetingRoomPartners);
         }
-        
+
         $this->dispatchBrowserEvent('swal:success', [
             'type' => 'success',
             'message' => 'Meeting Room Partner deleted successfully!',

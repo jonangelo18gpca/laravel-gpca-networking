@@ -13,6 +13,9 @@ use App\Models\Session as Sessions;
 use Carbon\Carbon;
 use Livewire\Component;
 
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+
 class SponsorList extends Component
 {
     public $event;
@@ -33,58 +36,226 @@ class SponsorList extends Component
 
     protected $listeners = ['addSponsorConfirmed' => 'addSponsor', 'deleteSponsorConfirmed' => 'deleteSponsor'];
 
-    public function mount($eventId, $eventCategory)
-    {
-        $this->event = Events::where('id', $eventId)->where('category', $eventCategory)->first();
+    // public function mount($eventId, $eventCategory)
+    // {
+    //     $this->event = Events::where('id', $eventId)->where('category', $eventCategory)->first();
 
-        $sponsors = Sponsors::where('event_id', $eventId)->orderBy('datetime_added', 'ASC')->get();
+    //     $sponsors = Sponsors::where('event_id', $eventId)->orderBy('datetime_added', 'ASC')->get();
 
-        if ($sponsors->isNotEmpty()) {
-            foreach ($sponsors as $sponsor) {
-                if ($sponsor->feature_id == 0) {
-                    $category = $this->event->short_name;
-                } else {
-                    $feature = Features::where('event_id', $this->event->id)->where('id', $sponsor->feature_id)->first();
-                    if ($feature) {
-                        $category = $feature->short_name;
-                    } else {
-                        $category = "Others";
-                    }
-                }
+    //     if ($sponsors->isNotEmpty()) {
+    //         foreach ($sponsors as $sponsor) {
+    //             if ($sponsor->feature_id == 0) {
+    //                 $category = $this->event->short_name;
+    //             } else {
+    //                 $feature = Features::where('event_id', $this->event->id)->where('id', $sponsor->feature_id)->first();
+    //                 if ($feature) {
+    //                     $category = $feature->short_name;
+    //                 } else {
+    //                     $category = "Others";
+    //                 }
+    //             }
 
-                $sponsorType = SponsorTypes::where('event_id', $this->event->id)->where('id', $sponsor->sponsor_type_id)->first();
-                if ($sponsorType) {
-                    $type = $sponsorType->name;
-                } else {
-                    $type = "N/A";
-                }
+    //             $sponsorType = SponsorTypes::where('event_id', $this->event->id)->where('id', $sponsor->sponsor_type_id)->first();
+    //             if ($sponsorType) {
+    //                 $type = $sponsorType->name;
+    //             } else {
+    //                 $type = "N/A";
+    //             }
 
-                array_push($this->finalListOfSponsors, [
-                    'id' => $sponsor->id,
-                    // 'logo' => Medias::where('id', $sponsor->logo_media_id)->value('file_url'),
-                    'logo' => $sponsor->logo_media_id
-                        ? Medias::where('id', $sponsor->logo_media_id)->value('file_url')
-                        : null,
-                    'name' => $sponsor->name,
-                    'category' => $category,
-                    'type' => $type,
-                    'website' => $sponsor->website,
-                    'is_active' => $sponsor->is_active,
-                    'datetime_added' => Carbon::parse($sponsor->datetime_added)->format('M j, Y g:i A'),
-                ]);
-            }
+    //             array_push($this->finalListOfSponsors, [
+    //                 'id' => $sponsor->id,
+    //                 // 'logo' => Medias::where('id', $sponsor->logo_media_id)->value('file_url'),
+    //                 'logo' => $sponsor->logo_media_id
+    //                     ? Medias::where('id', $sponsor->logo_media_id)->value('file_url')
+    //                     : null,
+    //                 'name' => $sponsor->name,
+    //                 'category' => $category,
+    //                 'type' => $type,
+    //                 'website' => $sponsor->website,
+    //                 'is_active' => $sponsor->is_active,
+    //                 'datetime_added' => Carbon::parse($sponsor->datetime_added)->format('M j, Y g:i A'),
+    //             ]);
+    //         }
+    //     }
+
+    //     $this->inputNameVariableDateTime = "sponsorDateTime";
+    //     $this->btnUpdateNameMethodDateTime = "editSponsorDateTime";
+    //     $this->btnCancelNameMethodDateTime = "resetEditSponsorDateTimeFields";
+
+    //     $this->addSponsorForm = false;
+    //     $this->editSponsorDateTimeForm = false;
+
+    //     $this->mediaFileList = getMediaFileList();
+    //     $this->chooseImageModal = false;
+
+        
+    // }
+
+public function mount($eventId, $eventCategory)
+{
+    $this->event = Events::where('id', $eventId)
+        ->where('category', $eventCategory)
+        ->first();
+
+    $this->inputNameVariableDateTime = "sponsorDateTime";
+    $this->btnUpdateNameMethodDateTime = "editSponsorDateTime";
+    $this->btnCancelNameMethodDateTime = "resetEditSponsorDateTimeFields";
+
+    $this->addSponsorForm = false;
+    $this->editSponsorDateTimeForm = false;
+
+    $this->mediaFileList = getMediaFileList();
+    $this->chooseImageModal = false;
+
+    $this->loadSponsors();
+}
+
+    private function loadSponsors()
+{
+    $this->finalListOfSponsors = [];
+
+    $sponsors = Sponsors::where('event_id', $this->event->id)
+        ->orderBy('datetime_added', 'ASC')
+        ->orderBy('id', 'ASC')
+        ->get();
+
+    foreach ($sponsors as $sponsor) {
+        if ($sponsor->feature_id == 0) {
+            $category = $this->event->short_name;
+        } else {
+            $feature = Features::where('event_id', $this->event->id)
+                ->where('id', $sponsor->feature_id)
+                ->first();
+
+            $category = $feature ? $feature->short_name : 'Others';
         }
 
-        $this->inputNameVariableDateTime = "sponsorDateTime";
-        $this->btnUpdateNameMethodDateTime = "editSponsorDateTime";
-        $this->btnCancelNameMethodDateTime = "resetEditSponsorDateTimeFields";
+        $sponsorType = SponsorTypes::where('event_id', $this->event->id)
+            ->where('id', $sponsor->sponsor_type_id)
+            ->first();
 
-        $this->addSponsorForm = false;
-        $this->editSponsorDateTimeForm = false;
-
-        $this->mediaFileList = getMediaFileList();
-        $this->chooseImageModal = false;
+        $this->finalListOfSponsors[] = [
+            'id' => $sponsor->id,
+            'logo' => $sponsor->logo_media_id
+                ? Medias::where('id', $sponsor->logo_media_id)
+                    ->value('file_url')
+                : null,
+            'name' => $sponsor->name,
+            'category' => $category,
+            'type' => $sponsorType ? $sponsorType->name : 'N/A',
+            'website' => $sponsor->website,
+            'is_active' => $sponsor->is_active,
+            'datetime_added' => Carbon::parse($sponsor->datetime_added)
+                ->format('M j, Y g:i A'),
+        ];
     }
+}
+
+public function reorderSponsors($items)
+{
+    abort_unless(
+        session('userType') === 'gpcaAdmin',
+        403,
+        'Only GPCA administrators can reorder sponsors.'
+    );
+
+    Validator::make(['items' => $items], [
+        'items' => 'required|array|min:1',
+        'items.*' => 'required|array',
+        'items.*.value' => 'required|integer|min:1|distinct',
+        'items.*.order' => 'required|integer|min:1|distinct',
+    ])->validate();
+
+    $orderedItems = collect($items)
+        ->sortBy('order')
+        ->values();
+
+    $positions = $orderedItems
+        ->pluck('order')
+        ->map(fn ($order) => (int) $order)
+        ->all();
+
+    abort_unless(
+        $positions === range(1, $orderedItems->count()),
+        422,
+        'Invalid sponsor positions.'
+    );
+
+    $orderedIds = $orderedItems
+        ->pluck('value')
+        ->map(fn ($id) => (int) $id)
+        ->all();
+
+    DB::transaction(function () use ($orderedIds) {
+        $sponsors = Sponsors::where('event_id', $this->event->id)
+            ->orderBy('datetime_added', 'ASC')
+            ->orderBy('id', 'ASC')
+            ->lockForUpdate()
+            ->get();
+
+        $currentIds = $sponsors
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->sort()
+            ->values()
+            ->all();
+
+        $submittedIds = collect($orderedIds)
+            ->sort()
+            ->values()
+            ->all();
+
+        abort_unless(
+            $currentIds === $submittedIds,
+            422,
+            'The sponsor list has changed. Refresh the page and try again.'
+        );
+
+        $dateSlots = [];
+        $previousDate = null;
+
+        foreach ($sponsors as $sponsor) {
+            abort_if(
+                empty($sponsor->datetime_added),
+                422,
+                'Each sponsor must have a date before reordering.'
+            );
+
+            $date = Carbon::parse($sponsor->datetime_added)
+                ->setMicrosecond(0);
+
+            if (
+                $previousDate &&
+                $date->lessThanOrEqualTo($previousDate)
+            ) {
+                $date = $previousDate->copy()->addSecond();
+            }
+
+            $dateSlots[] = $date->format('Y-m-d H:i:s');
+            $previousDate = $date;
+        }
+
+        foreach ($orderedIds as $index => $sponsorId) {
+            Sponsors::where('event_id', $this->event->id)
+                ->where('id', $sponsorId)
+                ->update([
+                    'datetime_added' => $dateSlots[$index],
+                ]);
+        }
+    });
+
+    $this->resetEditSponsorDateTimeFields();
+    $this->activeDeleteIndex = null;
+    $this->loadSponsors();
+
+    $this->dispatchBrowserEvent('swal:success', [
+        'type' => 'success',
+        'message' => 'Sponsor order updated successfully!',
+        'text' => '',
+    ]);
+}
+
+
 
     public function render()
     {
@@ -188,6 +359,20 @@ class SponsorList extends Component
         }
 
 
+        $lastSponsorDate = Sponsors::where('event_id', $this->event->id)
+    ->max('datetime_added');
+
+$newSponsorDate = Carbon::now()->setMicrosecond(0);
+
+if (
+    $lastSponsorDate &&
+    $newSponsorDate->lessThanOrEqualTo(Carbon::parse($lastSponsorDate))
+) {
+    $newSponsorDate = Carbon::parse($lastSponsorDate)
+        ->setMicrosecond(0)
+        ->addSecond();
+}
+
         $newSponsor = Sponsors::create([
             'event_id' => $this->event->id,
             'feature_id' => $this->feature_id,
@@ -196,7 +381,9 @@ class SponsorList extends Component
             'website' => $this->website,
             // 'logo_media_id' => $this->image_media_id ?? null,
             'logo_media_id' => $logoMediaId,
-            'datetime_added' => Carbon::now(),
+            // 'datetime_added' => Carbon::now(),
+            'datetime_added' => $newSponsorDate,
+
         ]);
 
 
@@ -230,19 +417,22 @@ class SponsorList extends Component
                 $newSponsor->id,
             );
         }
-        array_push($this->finalListOfSponsors, [
-            'id' => $newSponsor->id,
-            // 'logo' => $this->image_media_id ? Medias::where('id', $this->image_media_id)->value('file_url') : null,
-            'logo' => $logoMediaId
-                ? Medias::where('id', $logoMediaId)->value('file_url')
-                : null,
-            'name' => $this->name,
-            'category' => $selectedCategory,
-            'type' => $selectedType,
-            'website' => $this->website,
-            'is_active' => true,
-            'datetime_added' => Carbon::parse(Carbon::now())->format('M j, Y g:i A'),
-        ]);
+        // array_push($this->finalListOfSponsors, [
+        //     'id' => $newSponsor->id,
+        //     // 'logo' => $this->image_media_id ? Medias::where('id', $this->image_media_id)->value('file_url') : null,
+        //     'logo' => $logoMediaId
+        //         ? Medias::where('id', $logoMediaId)->value('file_url')
+        //         : null,
+        //     'name' => $this->name,
+        //     'category' => $selectedCategory,
+        //     'type' => $selectedType,
+        //     'website' => $this->website,
+        //     'is_active' => true,
+        //     'datetime_added' => Carbon::parse(Carbon::now())->format('M j, Y g:i A'),
+        // ]);
+
+        $this->loadSponsors();
+        
 
         $this->resetAddSponsorFields();
 
@@ -305,7 +495,12 @@ class SponsorList extends Component
     // EDIT DATETIME
     public function showEditSponsorDateTime($sponsorId, $sponsorArrayIndex)
     {
-        $sponsorDateTime = Sponsors::where('id', $sponsorId)->value('datetime_added');
+        // $sponsorDateTime = Sponsors::where('id', $sponsorId)->value('datetime_added');
+
+        $sponsorDateTime = Sponsors::where('event_id', $this->event->id)
+    ->where('id', $sponsorId)
+    ->value('datetime_added');
+
 
         $this->sponsorId = $sponsorId;
         $this->sponsorDateTime = $sponsorDateTime;
@@ -321,28 +516,48 @@ class SponsorList extends Component
         $this->sponsorArrayIndex = null;
     }
 
-    public function editSponsorDateTime()
-    {
-        $this->validate([
-            'sponsorDateTime' => 'required',
-        ]);
+    // public function editSponsorDateTime()
+    // {
+    //     $this->validate([
+    //         'sponsorDateTime' => 'required',
+    //     ]);
 
-        Sponsors::where('id', $this->sponsorId)->update([
+    //     Sponsors::where('id', $this->sponsorId)->update([
+    //         'datetime_added' => $this->sponsorDateTime,
+    //     ]);
+
+    //     $this->finalListOfSponsors[$this->sponsorArrayIndex]['datetime_added'] = Carbon::parse($this->sponsorDateTime)->format('M j, Y g:i A');
+
+    //     $this->resetEditSponsorDateTimeFields();
+
+    //     $this->dispatchBrowserEvent('swal:success', [
+    //         'type' => 'success',
+    //         'message' => 'Sponsor updated successfully!',
+    //         'text' => ''
+    //     ]);
+    // }
+
+public function editSponsorDateTime()
+{
+    $this->validate([
+        'sponsorDateTime' => 'required|date',
+    ]);
+
+    Sponsors::where('event_id', $this->event->id)
+        ->where('id', $this->sponsorId)
+        ->update([
             'datetime_added' => $this->sponsorDateTime,
         ]);
 
-        $this->finalListOfSponsors[$this->sponsorArrayIndex]['datetime_added'] = Carbon::parse($this->sponsorDateTime)->format('M j, Y g:i A');
+    $this->loadSponsors();
+    $this->resetEditSponsorDateTimeFields();
 
-        $this->resetEditSponsorDateTimeFields();
-
-        $this->dispatchBrowserEvent('swal:success', [
-            'type' => 'success',
-            'message' => 'Sponsor updated successfully!',
-            'text' => ''
-        ]);
-    }
-
-
+    $this->dispatchBrowserEvent('swal:success', [
+        'type' => 'success',
+        'message' => 'Sponsor updated successfully!',
+        'text' => '',
+    ]);
+}
 
 
 
