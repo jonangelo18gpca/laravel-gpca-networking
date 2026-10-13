@@ -11,6 +11,8 @@ use App\Models\Feature as Features;
 use App\Models\Media as Medias;
 use Carbon\Carbon;
 use Livewire\Component;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class SpeakersList extends Component
 {
@@ -49,47 +51,209 @@ class SpeakersList extends Component
         $this->mediaFileList = getMediaFileList();
         $this->chooseImageModal = false;
 
-        $speakers = Speakers::where('event_id', $eventId)->orderBy('datetime_added', 'ASC')->get();
-        if ($speakers->isNotEmpty()) {
-            foreach ($speakers as $speaker) {
-                if ($speaker->feature_id == 0) {
-                    $category = $this->event->short_name;
-                } else {
-                    $feature = Features::where('event_id', $this->event->id)->where('id', $speaker->feature_id)->first();
-                    if ($feature) {
-                        $category = $feature->short_name;
-                    } else {
-                        $category = "Others";
-                    }
-                }
+        // $speakers = Speakers::where('event_id', $eventId)->orderBy('datetime_added', 'ASC')->get();
+        // if ($speakers->isNotEmpty()) {
+        //     foreach ($speakers as $speaker) {
+        //         if ($speaker->feature_id == 0) {
+        //             $category = $this->event->short_name;
+        //         } else {
+        //             $feature = Features::where('event_id', $this->event->id)->where('id', $speaker->feature_id)->first();
+        //             if ($feature) {
+        //                 $category = $feature->short_name;
+        //             } else {
+        //                 $category = "Others";
+        //             }
+        //         }
 
-                $speakerType = SpeakerTypes::where('event_id', $this->event->id)->where('id', $speaker->speaker_type_id)->first();
-                if ($speakerType) {
-                    $type = $speakerType->name;
-                } else {
-                    $type = "N/A";
-                }
+        //         $speakerType = SpeakerTypes::where('event_id', $this->event->id)->where('id', $speaker->speaker_type_id)->first();
+        //         if ($speakerType) {
+        //             $type = $speakerType->name;
+        //         } else {
+        //             $type = "N/A";
+        //         }
 
-                if ($speaker->pfp_media_id) {
-                    $speakerPFPUrl = Medias::where('id', $speaker->pfp_media_id)->value('file_url');
-                } else {
-                    $speakerPFPUrl = null;
-                }
+        //         if ($speaker->pfp_media_id) {
+        //             $speakerPFPUrl = Medias::where('id', $speaker->pfp_media_id)->value('file_url');
+        //         } else {
+        //             $speakerPFPUrl = null;
+        //         }
 
-                array_push($this->finalListOfSpeakers, [
-                    'id' => $speaker->id,
-                    'pfp' => $speakerPFPUrl,
-                    'name' => $speaker->salutation . ' ' . $speaker->first_name . ' ' . $speaker->middle_name . ' ' . $speaker->last_name,
-                    'category' => $category,
-                    'type' => $type,
-                    'job_title' => $speaker->job_title,
-                    'company_name' => $speaker->company_name,
-                    'is_active' => $speaker->is_active,
-                    'datetime_added' => Carbon::parse($speaker->datetime_added)->format('M j, Y g:i A'),
-                ]);
+        //         array_push($this->finalListOfSpeakers, [
+        //             'id' => $speaker->id,
+        //             'pfp' => $speakerPFPUrl,
+        //             'name' => $speaker->salutation . ' ' . $speaker->first_name . ' ' . $speaker->middle_name . ' ' . $speaker->last_name,
+        //             'category' => $category,
+        //             'type' => $type,
+        //             'job_title' => $speaker->job_title,
+        //             'company_name' => $speaker->company_name,
+        //             'is_active' => $speaker->is_active,
+        //             'datetime_added' => Carbon::parse($speaker->datetime_added)->format('M j, Y g:i A'),
+        //         ]);
+        //     }
+        // }
+
+        $this->loadSpeakers();
+    }
+
+    private function loadSpeakers()
+    {
+        $this->finalListOfSpeakers = [];
+
+        $speakers = Speakers::where('event_id', $this->event->id)
+            ->orderBy('datetime_added', 'ASC')
+            ->orderBy('id', 'ASC')
+            ->get();
+
+        foreach ($speakers as $speaker) {
+            if ($speaker->feature_id == 0) {
+                $category = $this->event->short_name;
+            } else {
+                $feature = Features::where('event_id', $this->event->id)
+                    ->where('id', $speaker->feature_id)
+                    ->first();
+
+                $category = $feature ? $feature->short_name : 'Others';
             }
+
+            $speakerType = SpeakerTypes::where('event_id', $this->event->id)
+                ->where('id', $speaker->speaker_type_id)
+                ->first();
+
+            $speakerPFPUrl = $speaker->pfp_media_id
+                ? Medias::where('id', $speaker->pfp_media_id)->value('file_url')
+                : null;
+
+            $this->finalListOfSpeakers[] = [
+                'id' => $speaker->id,
+                'pfp' => $speakerPFPUrl,
+                'name' => $speaker->salutation . ' '
+                    . $speaker->first_name . ' '
+                    . $speaker->middle_name . ' '
+                    . $speaker->last_name,
+                'category' => $category,
+                'type' => $speakerType ? $speakerType->name : 'N/A',
+                'job_title' => $speaker->job_title,
+                'company_name' => $speaker->company_name,
+                'is_active' => $speaker->is_active,
+                'datetime_added' => Carbon::parse($speaker->datetime_added)
+                    ->format('M j, Y g:i A'),
+            ];
         }
     }
+
+    public function reorderSpeakers($items)
+    {
+        abort_unless(
+            session('userType') === 'gpcaAdmin',
+            403,
+            'Only GPCA administrators can reorder speakers.'
+        );
+
+        Validator::make(['items' => $items], [
+            'items' => 'required|array|min:1',
+            'items.*' => 'required|array',
+            'items.*.value' => 'required|integer|min:1|distinct',
+            'items.*.order' => 'required|integer|min:1|distinct',
+        ])->validate();
+
+        $orderedItems = collect($items)
+            ->sortBy('order')
+            ->values();
+
+        $positions = $orderedItems
+            ->pluck('order')
+            ->map(fn($order) => (int) $order)
+            ->all();
+
+        abort_unless(
+            $positions === range(1, $orderedItems->count()),
+            422,
+            'Invalid speaker positions.'
+        );
+
+        $orderedIds = $orderedItems
+            ->pluck('value')
+            ->map(fn($id) => (int) $id)
+            ->all();
+
+        DB::transaction(function () use ($orderedIds) {
+            $speakers = Speakers::where('event_id', $this->event->id)
+                ->orderBy('datetime_added', 'ASC')
+                ->orderBy('id', 'ASC')
+                ->lockForUpdate()
+                ->get();
+
+            $currentIds = $speakers
+                ->pluck('id')
+                ->map(fn($id) => (int) $id)
+                ->sort()
+                ->values()
+                ->all();
+
+            $submittedIds = collect($orderedIds)
+                ->sort()
+                ->values()
+                ->all();
+
+            abort_unless(
+                $currentIds === $submittedIds,
+                422,
+                'The speaker list has changed. Refresh the page and try again.'
+            );
+
+            $dateSlots = [];
+            $previousDate = null;
+
+            foreach ($speakers as $speaker) {
+                abort_if(
+                    empty($speaker->datetime_added),
+                    422,
+                    'Each speaker must have a date before reordering.'
+                );
+
+                $date = Carbon::parse($speaker->datetime_added)
+                    ->startOfSecond();
+
+                if ($previousDate && $date->lessThanOrEqualTo($previousDate)) {
+                    $date = $previousDate->copy()->addSecond();
+                }
+
+                $dateSlots[] = $date->format('Y-m-d H:i:s');
+                $previousDate = $date;
+            }
+
+            // foreach ($orderedIds as $index => $speakerId) {
+            //     // Speakers::where('event_id', $this->event->id)
+            //     //     ->where('id', $speakerId)
+            //     //     ->update([
+            //     //         'datetime_added' => $dateSlots[$index],
+            //     //     ]);
+
+            //     $this->validate([
+            //         'speakerDateTime' => 'required|date',
+            //     ]);
+            // }
+
+            foreach ($orderedIds as $index => $speakerId) {
+    Speakers::where('event_id', $this->event->id)
+        ->where('id', $speakerId)
+        ->update([
+            'datetime_added' => $dateSlots[$index],
+        ]);
+}
+        });
+
+        $this->resetEditSpeakerDateTimeFields();
+        $this->activeDeleteIndex = null;
+        $this->loadSpeakers();
+
+        $this->dispatchBrowserEvent('swal:success', [
+            'type' => 'success',
+            'message' => 'Speaker order updated successfully!',
+            'text' => '',
+        ]);
+    }
+
 
     public function render()
     {
@@ -106,7 +270,10 @@ class SpeakersList extends Component
     // EDIT DATETIME
     public function showEditSpeakerDateTime($speakerId, $speakerArrayIndex)
     {
-        $speakerDateTime = Speakers::where('id', $speakerId)->value('datetime_added');
+        // $speakerDateTime = Speakers::where('id', $speakerId)->value('datetime_added');
+        $speakerDateTime = Speakers::where('event_id', $this->event->id)
+    ->where('id', $speakerId)
+    ->value('datetime_added');
 
         $this->speakerId = $speakerId;
         $this->speakerDateTime = $speakerDateTime;
@@ -122,26 +289,51 @@ class SpeakersList extends Component
         $this->speakerArrayIndex = null;
     }
 
-    public function editSpeakerDateTime()
-    {
-        $this->validate([
-            'speakerDateTime' => 'required',
-        ]);
+    // public function editSpeakerDateTime()
+    // {
+    //     $this->validate([
+    //         'speakerDateTime' => 'required',
+    //     ]);
 
-        Speakers::where('id', $this->speakerId)->update([
+    //     Speakers::where('id', $this->speakerId)->update([
+    //         'datetime_added' => $this->speakerDateTime,
+    //     ]);
+
+    //     // $this->finalListOfSpeakers[$this->speakerArrayIndex]['datetime_added'] = Carbon::parse($this->speakerDateTime)->format('M j, Y g:i A');
+
+    //     $this->loadSpeakers();
+
+    //     $this->resetEditSpeakerDateTimeFields();
+
+    //     $this->dispatchBrowserEvent('swal:success', [
+    //         'type' => 'success',
+    //         'message' => 'Speaker Datetime updated successfully!',
+    //         'text' => ''
+    //     ]);
+    // }
+
+
+    public function editSpeakerDateTime()
+{
+    $this->validate([
+        'speakerDateTime' => 'required|date',
+    ]);
+
+    Speakers::where('event_id', $this->event->id)
+        ->where('id', $this->speakerId)
+        ->update([
             'datetime_added' => $this->speakerDateTime,
         ]);
 
-        $this->finalListOfSpeakers[$this->speakerArrayIndex]['datetime_added'] = Carbon::parse($this->speakerDateTime)->format('M j, Y g:i A');
+    $this->loadSpeakers();
+    $this->resetEditSpeakerDateTimeFields();
 
-        $this->resetEditSpeakerDateTimeFields();
-
-        $this->dispatchBrowserEvent('swal:success', [
-            'type' => 'success',
-            'message' => 'Speaker Datetime updated successfully!',
-            'text' => ''
-        ]);
-    }
+    $this->dispatchBrowserEvent('swal:success', [
+        'type' => 'success',
+        'message' => 'Speaker Datetime updated successfully!',
+        'text' => '',
+    ]);
+}
 
 
 
@@ -215,6 +407,19 @@ class SpeakersList extends Component
     public function addSpeaker()
     {
 
+        $lastSpeakerDate = Speakers::where('event_id', $this->event->id)
+            ->max('datetime_added');
+
+        $newSpeakerDate = Carbon::now();
+
+        if (
+            $lastSpeakerDate &&
+            $newSpeakerDate->lessThanOrEqualTo(Carbon::parse($lastSpeakerDate))
+        ) {
+            $newSpeakerDate = Carbon::parse($lastSpeakerDate)->addSecond();
+        }
+
+
         //jon
         $pfpMediaId = $this->image_media_id;
 
@@ -231,7 +436,7 @@ class SpeakersList extends Component
                 'file_name' => $fileName,
                 'file_type' => $extension ?: 'image',
                 // 'file_size' => null,
-                  'file_size' => 0,
+                'file_size' => 0,
                 'width' => null,
                 'height' => null,
                 'date_uploaded' => Carbon::now(),
@@ -256,7 +461,9 @@ class SpeakersList extends Component
             // 'pfp_media_id' => $this->image_media_id ?? null, - jon
             'pfp_media_id' => $pfpMediaId,
 
-            'datetime_added' => Carbon::now(),
+            // 'datetime_added' => Carbon::now(),
+            'datetime_added' => $newSpeakerDate,
+            
         ]);
 
         foreach ($this->categoryChoices as $categoryChoice) {
@@ -291,19 +498,20 @@ class SpeakersList extends Component
             );
         }
 
-        array_push($this->finalListOfSpeakers, [
-            'id' => $newSpeaker->id,
-            // 'pfp' => $this->image_media_id ? Medias::where('id', $this->image_media_id)->value('file_url') : null,  - //jon
-           'pfp' => $pfpMediaId ? Medias::where('id', $pfpMediaId)->value('file_url') : null, //jon
-            'name' => $this->salutation . ' ' . $this->first_name . ' ' . $this->middle_name . ' ' . $this->last_name,
-            'category' => $selectedCategory,
-            'type' => $selectedType,
-            'company_name' => $this->company_name,
-            'job_title' => $this->job_title,
-            'is_active' => true,
-            'datetime_added' => Carbon::parse(Carbon::now())->format('M j, Y g:i A'),
-        ]);
+        // array_push($this->finalListOfSpeakers, [
+        //     'id' => $newSpeaker->id,
+        //     // 'pfp' => $this->image_media_id ? Medias::where('id', $this->image_media_id)->value('file_url') : null,  - //jon
+        //     'pfp' => $pfpMediaId ? Medias::where('id', $pfpMediaId)->value('file_url') : null, //jon
+        //     'name' => $this->salutation . ' ' . $this->first_name . ' ' . $this->middle_name . ' ' . $this->last_name,
+        //     'category' => $selectedCategory,
+        //     'type' => $selectedType,
+        //     'company_name' => $this->company_name,
+        //     'job_title' => $this->job_title,
+        //     'is_active' => true,
+        //     'datetime_added' => Carbon::parse(Carbon::now())->format('M j, Y g:i A'),
+        // ]);
 
+        $this->loadSpeakers();
         $this->resetAddSpeakerFields();
 
         $this->dispatchBrowserEvent('swal:success', [

@@ -98,8 +98,74 @@
     </div>
 
     @livewireScripts()
+        
+
+
+    
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.7/Sortable.min.js"></script>
+
+<script>
+    Livewire.directive('sortable', (el, directive, component) => {
+        if (directive.modifiers.length > 0) {
+            return;
+        }
+
+        if (Sortable.get(el)) {
+            return;
+        }
+
+        Sortable.create(el, {
+            animation: 150,
+            direction: 'vertical',
+            draggable: '[wire\\:sortable\\.item]',
+            handle: '[wire\\:sortable\\.handle]',
+            dataIdAttr: 'wire:sortable.item',
+
+            onEnd: async function (event) {
+                if (event.oldIndex === event.newIndex) {
+                    return;
+                }
+
+                const sortable = Sortable.get(el);
+
+                const items = sortable.toArray().map((id, index) => ({
+                    order: index + 1,
+                    value: Number(id)
+                }));
+
+                sortable.option('disabled', true);
+
+                try {
+                    await Livewire.find(component.id).call(
+                        directive.value,
+                        items
+                    );
+                } catch (error) {
+                    console.error('Speaker reorder failed:', error);
+                    alert('Could not save speaker order. Refresh the page before trying again.');
+                } finally {
+                    if (el.isConnected && Sortable.get(el)) {
+                        Sortable.get(el).option('disabled', false);
+                    }
+                }
+            }
+        });
+    });
+
+    Livewire.hook('element.removed', (el) => {
+        const sortable = Sortable.get(el);
+
+        if (sortable) {
+            sortable.destroy();
+        }
+    });
+</script>
+
     <script src="{{ asset('js/event/master.js') }}"></script>
     <script src="{{ asset('js/allswal.js') }}"></script>
+
+
 </body>
 
 </html>
