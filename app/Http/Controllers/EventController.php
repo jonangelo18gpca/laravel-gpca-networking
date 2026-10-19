@@ -470,21 +470,21 @@ class EventController extends Controller
                     "title" => "GPCA Sustainability Pavilion",
                     "link" => "https://www.gpcaforum.com/gpca-sustainability-pavilion/"
                 ],
-                [
-                    "image" => "https://www.gpcaforum.com/wp-content/uploads/2025/10/youth-forum.png",
-                    "title" => "GPCA Youth Forum",
-                    "link" => "https://www.gpcaforum.com/gpca-youth-forum/"
-                ],
+                // [
+                //     "image" => "https://www.gpcaforum.com/wp-content/uploads/2025/10/youth-forum.png",
+                //     "title" => "GPCA Youth Forum",
+                //     "link" => "https://www.gpcaforum.com/gpca-youth-forum/"
+                // ],
                 [
                     "image" => "https://www.gpcaforum.com/wp-content/uploads/2025/10/sol-x.png",
                     "title" => "Solutions Xchange",
                     "link" => "https://www.gpcaforum.com/solutions-xchange/"
                 ],
-                [
-                    "image" => "https://www.gpcaforum.com/wp-content/uploads/2025/10/nexus.png",
-                    "title" => "GPCA Startup Nexus",
-                    "link" => "https://www.gpcaforum.com/gpca-startup-nexus/"
-                ],
+                // [
+                //     "image" => "https://www.gpcaforum.com/wp-content/uploads/2025/10/nexus.png",
+                //     "title" => "GPCA Startup Nexus",
+                //     "link" => "https://www.gpcaforum.com/gpca-startup-nexus/"
+                // ],
                 [
                     "image" => "https://www.gpcaforum.com/wp-content/uploads/2025/10/vip-maj.png",
                     "title" => "VIP Majlis",
