@@ -574,31 +574,81 @@ class AttendeesController extends Controller
         }
     }
 
-    public function apiAttendeeLogout(Request $request, $apiCode, $eventCategory, $eventId, $attendeeId)
-    {
-        $validator = Validator::make($request->all(), [
-            'attendee_id' => 'required',
-            'device_token' => 'required',
-        ]);
+    // public function apiAttendeeLogout(Request $request, $apiCode, $eventCategory, $eventId, $attendeeId)
+    // {
+    //     $validator = Validator::make($request->all(), [
+    //         'attendee_id' => 'required',
+    //         // 'device_token' => 'required',
+    //            'device_token' => 'nullable|string',
+    //     ]);
 
-        if ($validator->fails()) {
-            return $this->errorValidation($validator->errors());
+    //     if ($validator->fails()) {
+    //         return $this->errorValidation($validator->errors());
+    //     }
+
+    //     try {
+    //         $request->user()->currentAccessToken()->delete();
+
+    //         $attendeeDevice = AttendeeDeviceToken::where('event_id', $eventId)->where('attendee_id', $request->attendee_id)->where('device_token', $request->device_token)->first();
+
+    //         if ($attendeeDevice) {
+    //             $attendeeDevice->delete();
+    //         }
+
+    //         return $this->success(null, "Logged out successfully", 200);
+    //     } catch (\Exception $e) {
+    //         return $this->error($e, "An error occurred while logging out", 500);
+    //     }
+    // }
+
+
+    public function apiAttendeeLogout(
+    Request $request,
+    $apiCode,
+    $eventCategory,
+    $eventId,
+    $attendeeId
+) {
+    $validator = Validator::make($request->all(), [
+        'attendee_id' => 'required',
+        'device_token' => 'nullable|string',
+    ]);
+
+    if ($validator->fails()) {
+        return $this->errorValidation($validator->errors());
+    }
+
+    try {
+        $user = $request->user();
+
+        if (!$user || !$user->currentAccessToken()) {
+            return $this->error(null, "Unauthenticated", 401);
         }
 
-        try {
-            $request->user()->currentAccessToken()->delete();
-
-            $attendeeDevice = AttendeeDeviceToken::where('event_id', $eventId)->where('attendee_id', $request->attendee_id)->where('device_token', $request->device_token)->first();
+        // Remove a notification token only when one was supplied.
+        if ($request->filled('device_token')) {
+            $attendeeDevice = AttendeeDeviceToken::where('event_id', $eventId)
+                ->where('attendee_id', $user->id)
+                ->where('device_token', $request->device_token)
+                ->first();
 
             if ($attendeeDevice) {
                 $attendeeDevice->delete();
             }
-
-            return $this->success(null, "Logged out successfully", 200);
-        } catch (\Exception $e) {
-            return $this->error($e, "An error occurred while logging out", 500);
         }
+
+        // Revoke this session even when no notification token exists.
+        $user->currentAccessToken()->delete();
+
+        return $this->success(null, "Logged out successfully", 200);
+    } catch (\Exception $e) {
+        return $this->error(
+            $e,
+            "An error occurred while logging out",
+            500
+        );
     }
+}
 
     // public function apiAttendeeProfile($apiCode, $eventCategory, $eventId, $attendeeId)
     public function apiAttendeeProfile(Request $request, $api_code, $eventCategory, $eventId, $attendeeId)
