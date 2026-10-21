@@ -357,7 +357,10 @@ class AttendeesController extends Controller
         $validator = Validator::make($request->all(), [
             'username' => 'required',
             'password' => 'required',
-            'device_token' => 'required',
+            // 'device_token' => 'required',
+            'device_token' => 'nullable|string',
+
+
             // 'firebase_uid' => 'required|string',
         ]);
 
@@ -392,15 +395,31 @@ class AttendeesController extends Controller
             //     $attendee->save();
             // }
 
-            $attendeeDeviceToken = AttendeeDeviceToken::where('event_id', $eventId)->where('attendee_id', $attendee->id)->where('device_token', $request->device_token)->first();
+            // $attendeeDeviceToken = AttendeeDeviceToken::where('event_id', $eventId)->where('attendee_id', $attendee->id)->where('device_token', $request->device_token)->first();
 
-            if (!$attendeeDeviceToken) {
-                AttendeeDeviceToken::create([
-                    'event_id' => $eventId,
-                    'attendee_id' => $attendee->id,
-                    'device_token' => $request->device_token,
-                ]);
-            }
+            // if (!$attendeeDeviceToken) {
+            //     AttendeeDeviceToken::create([
+            //         'event_id' => $eventId,
+            //         'attendee_id' => $attendee->id,
+            //         'device_token' => $request->device_token,
+            //     ]);
+            // }
+
+
+            if ($request->filled('device_token')) {
+    $attendeeDeviceToken = AttendeeDeviceToken::where('event_id', $eventId)
+        ->where('attendee_id', $attendee->id)
+        ->where('device_token', $request->device_token)
+        ->first();
+
+    if (!$attendeeDeviceToken) {
+        AttendeeDeviceToken::create([
+            'event_id' => $eventId,
+            'attendee_id' => $attendee->id,
+            'device_token' => $request->device_token,
+        ]);
+    }
+}
 
             $tokenResult = $attendee->createToken('api token of ' . $attendee->id);
 
@@ -582,14 +601,14 @@ class AttendeesController extends Controller
     }
 
     // public function apiAttendeeProfile($apiCode, $eventCategory, $eventId, $attendeeId)
-public function apiAttendeeProfile(Request $request, $api_code, $eventCategory, $eventId, $attendeeId)
+    public function apiAttendeeProfile(Request $request, $api_code, $eventCategory, $eventId, $attendeeId)
     {
 
-    Log::info('AUTO LOGIN CHECK', [
-        'token' => $request->bearerToken(),
-        'user' => auth()->user(),
-        'attendeeId_param' => $attendeeId,
-    ]);
+        Log::info('AUTO LOGIN CHECK', [
+            'token' => $request->bearerToken(),
+            'user' => auth()->user(),
+            'attendeeId_param' => $attendeeId,
+        ]);
         try {
             $attendee = Attendee::with('pfp')->where('id', $attendeeId)->where('event_id', $eventId)->first();
 
