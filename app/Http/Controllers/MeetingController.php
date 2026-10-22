@@ -78,9 +78,9 @@ class MeetingController extends Controller
             // }
 
             $rawDates = [
-                '2026-09-16',
-                '2026-09-17',
-
+                '2026-11-22',
+                '2026-11-23',
+                '2026-11-24',
             ];
 
             $blockingStatuses = [MeetingStatus::ACCEPTED->value];
@@ -169,6 +169,7 @@ class MeetingController extends Controller
                 "Company Meeting room ",
                 "GPCA Stand",
                 "Registration Area",
+                "Networking Lounge",
                 // "Plenary Area",
                 // "Alberta Networking Lounge",
             ];
