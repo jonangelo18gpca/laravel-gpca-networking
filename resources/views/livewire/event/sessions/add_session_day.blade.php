@@ -20,14 +20,25 @@
                     </div>
 
                     @foreach ($session_days as $index => $session_day)
-                        <div
+                        {{-- <div
+                            class="grid grid-cols-6 gap-10 pt-2 pb-2 mb-1 text-center items-center text-sm {{ $index % 2 == 0 ? 'bg-registrationInputFieldsBGColor' : 'bg-registrationCardBGColor' }}"> --}}
+
+                        <div wire:key="session-day-{{ $session_day['id'] }}"
                             class="grid grid-cols-6 gap-10 pt-2 pb-2 mb-1 text-center items-center text-sm {{ $index % 2 == 0 ? 'bg-registrationInputFieldsBGColor' : 'bg-registrationCardBGColor' }}">
+
                             <div class="col-span-1">{{ $index + 1 }}</div>
                             <div class="col-span-2">{{ $session_day['session_day'] }}</div>
                             <div class="col-span-2">{{ $session_day['description'] ?? 'N/A' }}</div>
-                            <div class="col-span-1">
-                                <button wire:click="deleteSessionDay({{ $index }})"
-                                    class="cursor-pointer hover:text-red-600 text-red-500 text-sm ">
+                            <div class="col-span-1 flex items-center justify-center gap-3">
+                                <button type="button" wire:click="editSessionDay({{ $session_day['id'] }})"
+                                    title="Edit session day"
+                                    class="cursor-pointer text-blue-500 hover:text-blue-700 text-sm">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+
+                                <button type="button" wire:click="deleteSessionDay({{ $index }})"
+                                    title="Delete session day"
+                                    class="cursor-pointer text-red-500 hover:text-red-600 text-sm">
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
                             </div>
@@ -37,10 +48,15 @@
             @endif
         </div>
         <div class="w-1/4 p-4 border-l border-gray-200 ">
-            <form>
-                <div class="text-primaryColor italic font-bold text-xl">
+            <form wire:submit.prevent="{{ $editingSessionDayId !== null ? 'updateSessionDay' : 'addSessionDay' }}">
+                {{-- <div class="text-primaryColor italic font-bold text-xl">
                     Add session day
+                </div> --}}
+
+                <div class="text-primaryColor italic font-bold text-xl">
+                    {{ $editingSessionDayId !== null ? 'Edit session day' : 'Add session day' }}
                 </div>
+
 
                 <div class="mt-5">
                     <div class="text-primaryColor">
@@ -65,17 +81,42 @@
                     <div class="mt-2">
                         <input type="text" wire:model.lazy="add_session_day_desc"
                             class="bg-registrationInputFieldsBGColor w-full py-1 px-3 outline-primaryColor rounded-md border border-gray-200">
+                        @error('add_session_day_desc')
+                            <div class="text-red-500 text-xs italic mt-1">
+                                {{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
 
-                <div class="flex gap-3 mt-8">
+                {{-- <div class="flex gap-3 mt-8">
                     <button type="button"
                         class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 w-full rounded items-center text-sm cursor-pointer"
                         wire:click.prevent="addSessionDay">Add</button>
                     <button type="button"
                         class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 w-full rounded items-center text-sm cursor-pointer"
                         wire:click.prevent="resetAddSessionDayFields">Cancel</button>
+                </div> --}}
+
+                <div class="flex gap-3 mt-8">
+                    <button type="submit" wire:loading.attr="disabled" wire:target="addSessionDay,updateSessionDay"
+                        class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 w-full rounded items-center text-sm cursor-pointer disabled:opacity-50">
+                        {{ $editingSessionDayId !== null ? 'Update' : 'Add' }}
+                    </button>
+
+                    @if ($editingSessionDayId !== null)
+                        <button type="button" wire:click="cancelEditSessionDay"
+                            class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 w-full rounded items-center text-sm cursor-pointer">
+                            Cancel edit
+                        </button>
+                    @endif
+
+                    <button type="button" wire:click="resetAddSessionDayFields"
+                        class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 w-full rounded items-center text-sm cursor-pointer">
+                        Close
+                    </button>
                 </div>
+
             </form>
         </div>
     </div>
