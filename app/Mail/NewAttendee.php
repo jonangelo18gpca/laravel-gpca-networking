@@ -65,7 +65,7 @@ class NewAttendee extends Mailable
         'PC'  => "Maximize your event experience: Download the 14ᵗʰ GPCA Plastics Conference networking app today!",
         'SCC' => "Maximize your event experience: Download the 16ᵗʰ GPCA Supply Chain Conference networking app today!",
         'ANC' => "Maximize your experience with the 15ᵗʰ GPCA Agri-Nutrients Conference networking app!",
-        'AF'  => "Maximize your experience with the 19ᵗʰ Annual GPCA Forum networking app!",
+        'AF'  => "Maximize your experience with the 20ᵗʰ Annual GPCA Forum networking app!",
     ];
 
     if (in_array($year, ['2025', '2026']) && isset($subjects[$category])) {

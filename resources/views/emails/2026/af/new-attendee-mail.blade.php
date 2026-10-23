@@ -29,7 +29,7 @@
     <li>For any assistance and technical issues, please contact <a href="mailto:jhoanna@gpca.org.ae">jhoanna@gpca.org.ae</a></li>
 </ol>
 
-{{-- <img src="http://gpcachem.org/wp-content/uploads/2026/09/RIC-mail-banner.png" alt="app" width="600" style="margin-top:25px;display:block;max-width:100%;width:100%;height:auto;border:0;outline:none;text-decoration:none;"> --}}
+<img src="http://gpcachem.org/wp-content/uploads/2026/09/RIC-mail-banner.png" alt="app" width="600" style="margin-top:25px;display:block;max-width:100%;width:100%;height:auto;border:0;outline:none;text-decoration:none;">
 
 <p class="normal" style="margin-top: 15px;">We look forward to welcoming you to Saudi Arabia for the 8ᵗʰ GPCA Research & Innovation Conference. With the networking app at your fingertips, you’ll be fully equipped to maximize your time, build meaningful connections, and enjoy a seamless conference experience.</p>
 

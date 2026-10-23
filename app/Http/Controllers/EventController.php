@@ -466,7 +466,7 @@ class EventController extends Controller
 
             $eventFeatures = [
                 [
-                    "image" => "https://www.gpcaforum.com/wp-content/uploads/2025/10/sus-pav.png",
+                    "image" => "https://www.gpcaforum.com/wp-content/uploads/2026/10/sus-pav-2.png",
                     "title" => "GPCA Sustainability Pavilion",
                     "link" => "https://www.gpcaforum.com/gpca-sustainability-pavilion/"
                 ],
