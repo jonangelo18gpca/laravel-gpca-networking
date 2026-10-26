@@ -486,7 +486,7 @@ class EventController extends Controller
                 //     "link" => "https://www.gpcaforum.com/gpca-startup-nexus/"
                 // ],
                 [
-                    "image" => "https://www.gpcaforum.com/wp-content/uploads/2025/10/vip-maj.png",
+                    "image" => "https://www.gpcaforum.com/wp-content/uploads/2026/10/vip.png",
                     "title" => "VIP Majlis",
                     "link" => "https://www.gpcaforum.com/vip-majlis/"
                 ],
