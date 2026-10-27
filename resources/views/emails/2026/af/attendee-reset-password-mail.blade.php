@@ -14,7 +14,7 @@
     <li>Change your passwords regularly and avoid reusing passwords for different accounts.</li>
 </ol>
 
-<p class="normal" style="margin-top: 15px;">If you did not initiate this password change, please contact Jhoanna Kilat immediately at <a href="mailto:jhoanna@gpca.org.ae">jhoanna@gpca.org.ae</a> or call +971 4 451 0666 ext. 151. Your account's security is our top priority, and we are here to assist you with any concerns you may have.</p>
+<p class="normal" style="margin-top: 15px;">If you did not initiate this password change, please contact Junita Paul immediately at <a href="mailto:junita@gpca.org.ae">junita@gpca.org.ae</a> or call +971 4 451 0666 ext. 154. Your account's security is our top priority, and we are here to assist you with any concerns you may have.</p>
 
 <p class="normal" style="margin-top: 15px;">Thank you for your attention to this matter. We appreciate your cooperation in ensuring the security of your account.</p>
 

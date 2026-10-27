@@ -10,7 +10,7 @@
 
 <p class="normal" style="margin-top: 15px;"><strong>OTP:</strong> {{ $details['otp'] }}</p>
 
-<p class="normal" style="margin-top: 15px;">This OTP is valid for 10 minutes. Please enter it in the app to activate your account. If you did not request this account activation, kindly disregard this email. If you continue to receive such emails or have any concerns, please contact Jhoanna Kilat at <a href="mailto:jhoanna@gpca.org.ae">jhoanna@gpca.org.ae</a> or call +971 4 451 0666 ext. 151.</p>
+<p class="normal" style="margin-top: 15px;">This OTP is valid for 10 minutes. Please enter it in the app to activate your account. If you did not request this account activation, kindly disregard this email. If you continue to receive such emails or have any concerns, please contact Junita Paul at <a href="mailto:junita@gpca.org.ae">junita@gpca.org.ae</a> or call +971 4 451 0666 ext. 154.</p>
 
 <p class="normal" style="margin-top: 15px;">Thank you for your attention to this matter. We appreciate your cooperation in keeping your account secure.</p>
 

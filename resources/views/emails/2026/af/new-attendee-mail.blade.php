@@ -10,7 +10,7 @@
 
 <p class="normal" style="margin-top: 15px;"><strong>Event Details:</strong></p>
 <p class="normal">Event Name: 20<sup>th</sup> Annual GPCA Forum</p>
-<p class="normal">Event Date: 22-24 November 2026</p>
+<p class="normal">Event Dates: 22-24 November 2026</p>
 <p class="normal">Event Venue: {{ $details['eventLocation'] }}</p>
 
 <p class="normal" style="margin-top: 15px;"><strong>How to activate your networking app account:</strong></p>
@@ -26,7 +26,7 @@
     <li>Check your inbox for a 6-digit OTP. Enter it in the app and set your new password.</li>
     <li>You’ll be redirected to the login screen. Enter your email and newly created password.</li>
     <li>Once logged in, you’ll have full access to all event sessions, networking tools, and features.</li>
-    <li>For any assistance and technical issues, please contact <a href="mailto:jhoanna@gpca.org.ae">jhoanna@gpca.org.ae</a></li>
+    <li>For any assistance and technical issues, please contact <a href="mailto:junita@gpca.org.ae">junita@gpca.org.ae</a></li>
 </ol>
 
 <img src="http://gpcachem.org/wp-content/uploads/2026/09/RIC-mail-banner.png" alt="app" width="600" style="margin-top:25px;display:block;max-width:100%;width:100%;height:auto;border:0;outline:none;text-decoration:none;">
