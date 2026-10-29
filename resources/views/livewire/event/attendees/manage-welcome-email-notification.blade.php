@@ -41,7 +41,129 @@
         <p>Applicable attendees to send: {{ $sendableAttendees }}</p>
         <p>Not applicable attendees to send: {{ count($finalListOfAttendees) - $sendableAttendees }}</p>
 
+
+        {{-- SELECT UP TO 50 ELIGIBLE ATTENDEES --}}
+        <div
+            style="
+        margin-top: 24px;
+        padding: 18px 20px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #ffffff;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    ">
+            <div
+                style="
+            margin-bottom: 6px;
+            color: #0f172a;
+            font-size: 15px;
+            font-weight: 600;
+        ">
+                Select a batch of 50 attendees
+            </div>
+
+            <p
+                style="
+            margin: 0 0 16px;
+            color: #64748b;
+            font-size: 12px;
+            line-height: 1.7;
+        ">
+                Select attendees who have not logged in or changed their password,
+                with the exact total sent count below.
+            </p>
+
+            <div
+                style="
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 12px;
+        ">
+                <div>
+                    <label for="welcome-email-total-sent-filter"
+                        style="
+                    display: block;
+                    margin-bottom: 6px;
+                    color: #334155;
+                    font-size: 12px;
+                    font-weight: 600;
+                ">
+                        Total sent equals
+                    </label>
+
+                    <input id="welcome-email-total-sent-filter" type="number" min="0" step="1"
+                        wire:model.defer="filterWelcomeEmailTotalSent"
+                        style="
+                    width: 150px;
+                    padding: 10px 12px;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 8px;
+                    background: #f8fafc;
+                    color: #0f172a;
+                    font-size: 14px;
+                ">
+                </div>
+
+                <button type="button" wire:click="select50AttendeesBySentCount" wire:loading.attr="disabled"
+                    wire:target="select50AttendeesBySentCount"
+                    style="
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                padding: 11px 18px;
+                border: 0;
+                border-radius: 8px;
+                background: #0f172a;
+                color: #ffffff;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+            ">
+                    <span wire:loading.remove wire:target="select50AttendeesBySentCount">
+                        <i class="fa-solid fa-users" aria-hidden="true"></i>
+
+                        Select up to 50
+                    </span>
+
+                    <span wire:loading wire:target="select50AttendeesBySentCount">
+                        Selecting...
+                    </span>
+                </button>
+            </div>
+
+            @error('filterWelcomeEmailTotalSent')
+                <div role="alert"
+                    style="
+                margin-top: 10px;
+                color: #b91c1c;
+                font-size: 12px;
+            ">
+                    {{ $message }}
+                </div>
+            @enderror
+
+            @if ($select50AttendeesMessage)
+                <div role="status"
+                    style="
+                margin-top: 14px;
+                padding: 10px 12px;
+                border: 1px solid #bfdbfe;
+                border-radius: 8px;
+                background: #eff6ff;
+                color: #1e40af;
+                font-size: 12px;
+                line-height: 1.7;
+            ">
+                    {{ $select50AttendeesMessage }}
+                </div>
+            @endif
+        </div>
+
         <div class="flex gap-5 mt-10">
+
+
             @if ($sendableAttendees == count($selectedAttendees))
                 <button type="button" wire:click.prevent="unselectAllAttendee" wire:key="unselectAllAttendee"
                     class="bg-primaryColor hover:bg-primaryColorHover text-white rounded text-sm p-5 py-1">Unselect

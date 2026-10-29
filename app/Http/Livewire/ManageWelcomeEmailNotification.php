@@ -18,6 +18,11 @@ class ManageWelcomeEmailNotification extends Component
     public $sendableAttendees = 0;
     public $activeSelectedIndex = null;
 
+
+    public $filterWelcomeEmailTotalSent = 0;
+    public $select50AttendeesMessage = null;
+
+
     protected $listeners = ['sendWelcomeEmailNotificationConfirmed' => 'sendWelcomeEmailNotification', 'sendWelcomeEmailNotificationBulkConfirmed' => 'sendWelcomeEmailNotificationBulk'];
 
     public function mount($eventId, $eventCategory)
@@ -232,4 +237,60 @@ class ManageWelcomeEmailNotification extends Component
 
         // $this->selectedAttendees = [];
     }
+
+    public function select50AttendeesBySentCount()
+{
+    $this->select50AttendeesMessage = null;
+
+    $this->validate([
+        'filterWelcomeEmailTotalSent' => 'required|integer|min:0',
+    ], [
+        'filterWelcomeEmailTotalSent.required' =>
+            'Enter the total sent count.',
+        'filterWelcomeEmailTotalSent.integer' =>
+            'Total sent must be a whole number.',
+        'filterWelcomeEmailTotalSent.min' =>
+            'Total sent cannot be negative.',
+    ]);
+
+    $targetSentCount = (int) $this->filterWelcomeEmailTotalSent;
+
+    $selected = [];
+
+    foreach ($this->finalListOfAttendees as $index => $attendee) {
+        // Only attendees who have never logged in.
+        if ($attendee['is_logged_in_already']) {
+            continue;
+        }
+
+        // Preserve the existing checkbox/send eligibility rule.
+        if ($attendee['is_password_resetted']) {
+            continue;
+        }
+
+        // Match the exact total sent count.
+        if (
+            (int) $attendee['totatWelcomeEmailNotificationSent']
+            !== $targetSentCount
+        ) {
+            continue;
+        }
+
+        // Keep indexes because the existing bulk sender uses indexes.
+        $selected[] = (string) $index;
+
+        if (count($selected) >= 50) {
+            break;
+        }
+    }
+
+    // Replace the current selection, rather than adding to it.
+    $this->selectedAttendees = $selected;
+
+    $count = count($selected);
+
+    $this->select50AttendeesMessage = $count > 0
+        ? "{$count} attendees selected: not logged in, password not changed, total sent = {$targetSentCount}."
+        : "No eligible attendees found with total sent = {$targetSentCount}.";
+}
 }
