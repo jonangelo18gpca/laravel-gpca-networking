@@ -46,10 +46,10 @@
     @include('livewire.event.data-sync.create-preview')
 
     {{-- Initial setup / occasional maintenance --}}
-    <details class="mt-6 border border-gray-200 rounded-xl p-5">
-        <summary class="cursor-pointer font-semibold">
-            Manage existing-session links — initial setup
-        </summary>
+<details wire:ignore.self class="mt-6 border border-gray-200 rounded-xl p-5">
+    <summary class="cursor-pointer font-semibold">
+        Manage existing-session links — initial setup
+    </summary>
 
         <p class="mt-3 text-sm text-gray-600">
             Select an agenda feature above, then load the linking list.
