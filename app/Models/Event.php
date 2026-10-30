@@ -69,6 +69,9 @@ class Event extends Model
         'show_social_networkings',
         'vertical_images_section',
 
+        'wordpress_source_url',
+        'wordpress_agenda_config',
+
     ];
 
 
@@ -77,6 +80,7 @@ class Event extends Model
         'show_event_features' => 'boolean',
         'show_social_networkings' => 'boolean',
         'vertical_images_section' => 'array',
+        'wordpress_agenda_config' => 'array',
     ];
 
     public function eventLogo()

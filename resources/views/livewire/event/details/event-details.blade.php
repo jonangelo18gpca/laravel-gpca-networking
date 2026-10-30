@@ -1,4 +1,6 @@
 <div>
+    
+    
     <div class="flex gap-3">
         @if ($eventData['eventDetails']['is_visible_in_the_app'])
             <button wire:click.prevent="toggleVisibilityInTheApp"

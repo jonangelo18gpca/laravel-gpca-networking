@@ -194,6 +194,20 @@ class EventController extends Controller
         ]);
     }
 
+    public function eventDataSyncView($eventCategory, $eventId)
+{
+    $event = \App\Models\Event::where('id', $eventId)
+        ->where('category', $eventCategory)
+        ->firstOrFail();
+
+    return view('admin.event.data-sync.index', [
+        'pageTitle' => 'Data Sync',
+        'eventName' => $event->full_name,
+        'eventCategory' => $eventCategory,
+        'eventId' => $eventId,
+    ]);
+}
+
     public function eventDashboardData($eventId)
     {
         $totalAttendees = 0;

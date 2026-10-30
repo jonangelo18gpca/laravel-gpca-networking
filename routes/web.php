@@ -39,6 +39,8 @@ Route::prefix('admin')->group(function () {
             Route::prefix('event/{eventCategory}/{eventId}')->group(function () {
                 Route::get('/dashboard', [EventController::class, 'eventDashboardView'])->name('admin.event.dashboard.view');
                 Route::get('/details', [EventController::class, 'eventDetailsView'])->name('admin.event.details.view');
+                Route::get('/data-sync', [EventController::class, 'eventDataSyncView'])
+    ->name('admin.event.data-sync.view');
 
                 Route::prefix('attendee')->group(function () {
                     Route::get('/', [AttendeesController::class, 'eventAttendeesView'])->name('admin.event.attendees.view');

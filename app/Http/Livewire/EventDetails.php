@@ -13,6 +13,8 @@ use Livewire\Component;
 
 class EventDetails extends Component
 {
+
+
     public $eventData, $eventCategories;
 
     // EDIT DETAILS
@@ -57,6 +59,7 @@ class EventDetails extends Component
     {
         $this->eventCategories = config('app.eventCategories');
         $this->eventData = $eventData;
+        // $this->loadWordPressAgendaSettings();
         $this->mediaFileList = getMediaFileList();
         $this->editEventAssetForm = false;
         $this->editEventDetailsForm = false;

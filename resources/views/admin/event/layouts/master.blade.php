@@ -41,6 +41,20 @@
                     <i class="fa-solid fa-calendar-days  w-5 text-center"></i>
                     <p>Event</p>
                 </a>
+
+                
+@if (session('userType') === 'gpcaAdmin')
+    <a href="{{ route('admin.event.data-sync.view', [
+            'eventCategory' => $eventCategory,
+            'eventId' => $eventId,
+        ]) }}"
+        class="{{ request()->routeIs('admin.event.data-sync.*') ? 'bg-sideBarBGColorHover' : '' }} hover:bg-sideBarBGColorHover flex items-center gap-5 p-2 rounded-md duration-500">
+        <i class="fa-solid fa-arrows-rotate w-5 text-center"></i>
+        <p>Data Sync</p>
+    </a>
+@endif
+
+
                 <a href="{{ route('admin.event.attendees.view', ['eventCategory' => $eventCategory, 'eventId' => $eventId]) }}" class="{{ request()->is('admin/event/*/*/attendee*') ? 'bg-sideBarBGColorHover' : 'hover:bg-sideBarBGColorHover' }} flex items-center gap-5 p-2 rounded-md duration-500">
                     <i class="fa-solid fa-people-group w-5 text-center"></i>
                     <p>Attendees</p>

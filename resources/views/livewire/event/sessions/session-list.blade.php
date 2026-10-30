@@ -44,7 +44,14 @@
             @foreach ($finalListOfSessions as $index => $finalListOfSession)
                 <div
                     class="grid grid-cols-12 gap-10 pt-2 pb-2 mb-1 text-center items-center text-sm {{ $index % 2 == 0 ? 'bg-registrationInputFieldsBGColor' : 'bg-registrationCardBGColor' }}">
-                    <div class="col-span-1">{{ $index + 1 }}</div>
+                    {{-- <div class="col-span-1">{{ $index + 1 }}</div> --}}
+                    <div class="col-span-1">
+                        <div>{{ $index + 1 }}</div>
+
+                        <div class="text-xs text-gray-500">
+                            App ID: {{ $finalListOfSession['id'] }}
+                        </div>
+                    </div>
                     <div class="col-span-2">{{ $finalListOfSession['categoryName'] }}</div>
                     <div class="col-span-2">{{ $finalListOfSession['session_date'] }}</div>
                     <div class="col-span-1">{{ $finalListOfSession['session_day'] }}</div>
