@@ -32,20 +32,39 @@ trait HasWordPressSpeakerLinking
             . ':' . $token;
     }
 
+    // protected function wpSpeakerLinkContext()
+    // {
+    //     $roleMappings = $this->wpSpeakerRoleMappings;
+    //     ksort($roleMappings);
+
+    //     return [
+    //         'event_id' => (int) $this->eventData['eventId'],
+    //         'source_url' => 'https://www.gpcaforum.com',
+    //         'post_type' => (string) $this->wpSpeakerSource,
+    //         'year' => (string) $this->wpSpeakerYear,
+    //         'feature_id' => (int) $this->wpSpeakerDestination,
+    //         'role_mappings' => $roleMappings,
+    //     ];
+    // }
+
+
     protected function wpSpeakerLinkContext()
     {
+        $identity = $this->wpSpeakerSettingsIdentity();
+
         $roleMappings = $this->wpSpeakerRoleMappings;
         ksort($roleMappings);
 
         return [
-            'event_id' => (int) $this->eventData['eventId'],
-            'source_url' => 'https://www.gpcaforum.com',
-            'post_type' => (string) $this->wpSpeakerSource,
-            'year' => (string) $this->wpSpeakerYear,
+            'event_id' => $identity['event_id'],
+            'source_url' => $identity['source_url'],
+            'post_type' => $identity['post_type'],
+            'year' => $identity['source_year'],
             'feature_id' => (int) $this->wpSpeakerDestination,
             'role_mappings' => $roleMappings,
         ];
     }
+
 
     protected function resetWordPressSpeakerLinking()
     {
@@ -93,7 +112,8 @@ trait HasWordPressSpeakerLinking
             // Fetch fresh source records instead of trusting public rows.
             $sourceRows = app(WordPressSpeakerPreview::class)->fetch(
                 $context['post_type'],
-                $context['year']
+                $context['year'],
+                $context['source_url']
             );
 
             $rows = [];
@@ -148,9 +168,22 @@ trait HasWordPressSpeakerLinking
                         ->first();
 
                     if (!$speaker) {
+                        $linkedSpeaker = Speaker::whereKey($link->speaker_id)->first();
+
+                        if (!$linkedSpeaker) {
+                            throw new RuntimeException(
+                                'WP #' . $wpId
+                                    . ' links to missing App speaker #'
+                                    . $link->speaker_id
+                                    . '. This stale link needs cleanup before a fresh import.'
+                            );
+                        }
+
                         throw new RuntimeException(
-                            'A saved link points to a deleted or recategorized '
-                                . 'speaker. Repair it before proceeding.'
+                            'WP #' . $wpId
+                                . ' links to App speaker #' . $link->speaker_id
+                                . ', but its event/category does not match the selected destination. '
+                                . 'Check the destination mapping; the link was not removed.'
                         );
                     }
 
@@ -359,7 +392,8 @@ trait HasWordPressSpeakerLinking
             // Recheck the source without trusting the displayed public rows.
             $freshRows = app(WordPressSpeakerPreview::class)->fetch(
                 $context['post_type'],
-                $context['year']
+                $context['year'],
+                $context['source_url']
             );
 
             $freshById = [];
@@ -517,10 +551,9 @@ trait HasWordPressSpeakerLinking
                 . 'No speaker details, images, order or session assignments '
                 . 'were changed. Reload the matching list to verify.';
 
-            $this->resetWordPressSpeakerUpdates();
+
             $this->resetWordPressSpeakerUpdates();
             $this->resetWordPressSpeakerCreation();
-            
         } catch (Throwable $exception) {
             report($exception);
 
@@ -532,5 +565,64 @@ trait HasWordPressSpeakerLinking
                 600
             );
         }
+    }
+
+
+    public function repairMissingWordPressSpeakerLink()
+    {
+        $this->assertDataSyncAdmin();
+
+        $eventId = (int) $this->eventData['eventId'];
+
+        $removed = DB::transaction(function () use ($eventId) {
+            \App\Models\Event::whereKey($eventId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // Check the raw table, including any soft-deleted records.
+            $speakerExists = DB::table('speakers')
+                ->where('id', 11)
+                ->exists();
+
+            if ($speakerExists) {
+                throw new RuntimeException(
+                    'App speaker #11 still exists in the database. '
+                        . 'No link was removed. Review its category or deletion state.'
+                );
+            }
+
+            $links = DB::table('wordpress_speaker_links')
+                ->where('event_id', $eventId)
+                ->where('wordpress_post_id', 15242)
+                ->where('speaker_id', 11)
+                ->lockForUpdate()
+                ->get();
+
+            if ($links->count() > 1) {
+                throw new RuntimeException(
+                    'More than one matching link exists. '
+                        . 'No links were removed; review them first.'
+                );
+            }
+
+            if ($links->isEmpty()) {
+                return 0;
+            }
+
+            return DB::table('wordpress_speaker_links')
+                ->where('id', $links->first()->id)
+                ->where('event_id', $eventId)
+                ->where('wordpress_post_id', 15242)
+                ->where('speaker_id', 11)
+                ->delete();
+        });
+
+        $this->resetWordPressSpeakerPreview();
+
+        $this->wpSpeakerSettingsMessage = $removed
+            ? 'The stale link for WP #15242 → App #11 was removed. '
+            . 'Reload the speaker source and missing-speaker preview.'
+            : 'No matching stale link remains. '
+            . 'Reload the speaker source and missing-speaker preview.';
     }
 }

@@ -24,12 +24,46 @@
             session type</button>
     </div>
 
-    @if (count($finalListOfSessions) == 0)
-        <div class="bg-red-400 text-white text-center py-3 mt-5 rounded-md">
-            There are no sessions yet.
-        </div>
-    @else
-        <div class="shadow-lg my-5 bg-white rounded-md">
+    <div class="mt-5 flex flex-wrap items-end gap-4">
+    <div class="w-full md:w-80">
+        <label
+            for="session-category-filter"
+            class="block text-sm font-medium text-gray-700 mb-2">
+            Filter by category
+        </label>
+
+        <select
+            id="session-category-filter"
+            wire:model="sessionCategoryFilter"
+            class="border border-gray-300 rounded-lg px-3 py-2 w-full">
+            <option value="">All categories</option>
+
+            <option value="0">
+                {{ $event->short_name }} — Main event
+            </option>
+
+            @foreach ($sessionFilterFeatures as $feature)
+                <option value="{{ $feature->id }}">
+                    {{ $feature->short_name }}
+                </option>
+            @endforeach
+        </select>
+    </div>
+
+    <p class="text-sm text-gray-500 pb-2">
+        Showing {{ count($filteredSessions) }}
+        of {{ count($finalListOfSessions) }} sessions
+    </p>
+</div>
+
+@if (count($filteredSessions) === 0)
+    <div class="bg-red-400 text-white text-center py-3 mt-5 rounded-md">
+        {{ count($finalListOfSessions) === 0
+            ? 'There are no sessions yet.'
+            : 'No sessions match the selected category.' }}
+    </div>
+@else
+    <div class="shadow-lg my-5 bg-white rounded-md">
             <div
                 class="grid grid-cols-12 pt-2 pb-2 mt-3 text-center items-center gap-10 text-sm text-white bg-primaryColor rounded-tl-md rounded-tr-md">
                 <div class="col-span-1">No.</div>
@@ -40,13 +74,14 @@
                 <div class="col-span-2">Timings</div>
                 <div class="col-span-1">Status</div>
                 <div class="col-span-1">Action</div>
-            </div>
-            @foreach ($finalListOfSessions as $index => $finalListOfSession)
-                <div
-                    class="grid grid-cols-12 gap-10 pt-2 pb-2 mb-1 text-center items-center text-sm {{ $index % 2 == 0 ? 'bg-registrationInputFieldsBGColor' : 'bg-registrationCardBGColor' }}">
-                    {{-- <div class="col-span-1">{{ $index + 1 }}</div> --}}
+                   </div>
+@foreach ($filteredSessions as $index => $finalListOfSession)
+    <div
+        wire:key="session-row-{{ $finalListOfSession['id'] }}"
+        class="grid grid-cols-12 gap-10 pt-2 pb-2 mb-1 text-center items-center text-sm {{ $loop->index % 2 == 0 ? 'bg-registrationInputFieldsBGColor' : 'bg-registrationCardBGColor' }}">
+             {{-- <div class="col-span-1">{{ $index + 1 }}</div> --}}
                     <div class="col-span-1">
-                        <div>{{ $index + 1 }}</div>
+                    <div>{{ $loop->iteration }}</div>
 
                         <div class="text-xs text-gray-500">
                             App ID: {{ $finalListOfSession['id'] }}

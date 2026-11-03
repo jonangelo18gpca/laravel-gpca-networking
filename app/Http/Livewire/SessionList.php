@@ -16,6 +16,7 @@ class SessionList extends Component
 {
     public $event;
     public $finalListOfSessions = [];
+    public $sessionCategoryFilter = '';
 
     // Add Sesssion
     public $feature_id, $session_date, $session_day, $session_type, $title, $start_time, $end_time;
@@ -67,6 +68,7 @@ class SessionList extends Component
 
                 array_push($this->finalListOfSessions, [
                     'id' => $session->id,
+                    'feature_id' => (int) $session->feature_id,
                     'categoryName' => $categoryName,
                     'session_date' => Carbon::parse($session->session_date)->format('F d, Y'),
                     'session_day' => $session->session_day,
@@ -84,13 +86,54 @@ class SessionList extends Component
         $this->addSessionTypeForm = false;
     }
 
+    // public function render()
+    // {
+    //     return view('livewire.event.sessions.session-list');
+    // }
+
     public function render()
     {
-        return view('livewire.event.sessions.session-list');
+        $filter = (string) $this->sessionCategoryFilter;
+
+        $filteredSessions = $this->finalListOfSessions;
+
+        if ($filter !== '') {
+            $filteredSessions = array_filter(
+                $this->finalListOfSessions,
+                function ($session) use ($filter) {
+                    return (string) $session['feature_id'] === $filter;
+                }
+            );
+        }
+
+        $sessionFilterFeatures = Features::where(
+            'event_id',
+            $this->event->id
+        )
+            ->orderBy('id')
+            ->get(['id', 'short_name']);
+
+        return view('livewire.event.sessions.session-list', [
+            'filteredSessions' => $filteredSessions,
+            'sessionFilterFeatures' => $sessionFilterFeatures,
+        ]);
+    }
+
+    public function updatedSessionCategoryFilter()
+    {
+        $this->activeDeleteIndex = null;
     }
 
     public function showAddSession()
     {
+
+
+      $this->categoryChoices = [];
+    $this->sessionDateChoices = [];
+    $this->sessionDayChoices = [];
+    $this->sessionTypeChoices = [];
+
+    
         array_push($this->categoryChoices, [
             'value' => $this->event->short_name,
             'id' => 0,
@@ -184,9 +227,21 @@ class SessionList extends Component
             $finalSessionType = $this->session_type;
         }
 
+        // $newSession = Sessions::create([
+        //     'event_id' => $this->event->id,
+        //     'feature_id' => (int) $newSession->feature_id,
+        //     'session_date' => $this->session_date,
+        //     'session_day' => $this->session_day,
+        //     'session_type' => $finalSessionType,
+        //     'title' => $this->title,
+        //     'start_time' => $this->start_time,
+        //     'end_time' => $finalEndTime,
+        //     'datetime_added' => Carbon::now(),
+        // ]);
+
         $newSession = Sessions::create([
             'event_id' => $this->event->id,
-            'feature_id' => $this->feature_id,
+            'feature_id' => (int) $this->feature_id,
             'session_date' => $this->session_date,
             'session_day' => $this->session_day,
             'session_type' => $finalSessionType,
@@ -203,16 +258,32 @@ class SessionList extends Component
             }
         }
 
+        // array_push($this->finalListOfSessions, [
+        //     'id' => $newSession->id,
+        //     'categoryName' => $selectedCategory,
+        //     'session_date' => Carbon::parse($this->session_date)->format('F d, Y'),
+        //     'session_day' => $this->session_day,
+        //     'title' => $this->title,
+        //     'timings' => $forArrayTimings,
+        //     'is_active' => true,
+        //     'datetime_added' => Carbon::parse(Carbon::now())->format('M j, Y g:i A'),
+        // ]);
+
+
         array_push($this->finalListOfSessions, [
-            'id' => $newSession->id,
-            'categoryName' => $selectedCategory,
-            'session_date' => Carbon::parse($this->session_date)->format('F d, Y'),
-            'session_day' => $this->session_day,
-            'title' => $this->title,
-            'timings' => $forArrayTimings,
-            'is_active' => true,
-            'datetime_added' => Carbon::parse(Carbon::now())->format('M j, Y g:i A'),
-        ]);
+    'id' => $newSession->id,
+    'feature_id' => (int) $newSession->feature_id,
+    'categoryName' => $selectedCategory,
+    'session_date' => Carbon::parse($this->session_date)
+        ->format('F d, Y'),
+    'session_day' => $this->session_day,
+    'title' => $this->title,
+    'timings' => $forArrayTimings,
+    'is_active' => true,
+    'datetime_added' => Carbon::parse(Carbon::now())
+        ->format('M j, Y g:i A'),
+]);
+
 
         $this->resetAddSessionFields();
 
@@ -245,21 +316,94 @@ class SessionList extends Component
         ]);
     }
 
+    // public function deleteSession()
+    // {
+    //     $session = Sessions::where('id', $this->finalListOfSessions[$this->activeDeleteIndex]['id'])->first();
+    //     if ($session) {
+    //         $session->delete();
+    //         unset($this->finalListOfSessions[$this->activeDeleteIndex]);
+    //         $this->finalListOfSessions = array_values($this->finalListOfSessions);
+    //     }
+
+    //     $this->dispatchBrowserEvent('swal:success', [
+    //         'type' => 'success',
+    //         'message' => 'Session deleted successfully!',
+    //         'text' => ''
+    //     ]);
+    // }
+
+
     public function deleteSession()
     {
-        $session = Sessions::where('id', $this->finalListOfSessions[$this->activeDeleteIndex]['id'])->first();
-        if ($session) {
-            $session->delete();
-            unset($this->finalListOfSessions[$this->activeDeleteIndex]);
-            $this->finalListOfSessions = array_values($this->finalListOfSessions);
+        abort_unless(
+            session('userType') === 'gpcaAdmin',
+            403,
+            'Only GPCA administrators can delete sessions.'
+        );
+
+        $index = $this->activeDeleteIndex;
+
+        if (
+            !is_scalar($index)
+            || !ctype_digit((string) $index)
+            || !isset($this->finalListOfSessions[$index]['id'])
+        ) {
+            $this->dispatchBrowserEvent('swal:success', [
+                'type' => 'warning',
+                'message' => 'The session list has changed.',
+                'text' => 'Refresh the page and select the session again.',
+            ]);
+
+            return;
         }
+
+        $eventId = (int) $this->event->id;
+        $sessionId = (int) $this->finalListOfSessions[$index]['id'];
+
+        DB::transaction(function () use ($eventId, $sessionId) {
+            Events::whereKey($eventId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $session = Sessions::where('event_id', $eventId)
+                ->whereKey($sessionId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            DB::table('wordpress_agenda_links')
+                ->where('event_id', $eventId)
+                ->where('session_id', $session->id)
+                ->delete();
+
+            if ($session->delete() === false) {
+                throw new \RuntimeException(
+                    'Session deletion was cancelled. '
+                        . 'No sync link was removed.'
+                );
+            }
+        });
+
+        $this->finalListOfSessions = array_values(
+            array_filter(
+                $this->finalListOfSessions,
+                function ($row) use ($sessionId) {
+                    return (int) $row['id'] !== $sessionId;
+                }
+            )
+        );
+
+        $this->activeDeleteIndex = null;
 
         $this->dispatchBrowserEvent('swal:success', [
             'type' => 'success',
             'message' => 'Session deleted successfully!',
-            'text' => ''
+            'text' =>
+            'Its WordPress sync link was removed. '
+                . 'If the WordPress record is still published and eligible, '
+                . 'reload the missing-session preview to import it again.',
         ]);
     }
+
 
 
     // ADD SESSION DATES
@@ -376,204 +520,204 @@ class SessionList extends Component
     //     unset($this->session_days[$arrayIndex]);
     // }
 
-// SESSION DAYS
-private function loadSessionDays()
-{
-    $this->session_days = SessionDays::where('event_id', $this->event->id)
-        ->orderBy('id')
-        ->get()
-        ->map(function ($day) {
-            return [
-                'id' => $day->id,
-                'session_day' => $day->session_day,
-                'description' => $day->description,
-            ];
-        })
-        ->toArray();
-}
-
-public function showAddSessionDay()
-{
-    $this->cancelEditSessionDay();
-    $this->loadSessionDays();
-    $this->addSessionDayForm = true;
-}
-
-public function resetAddSessionDayFields()
-{
-    $this->cancelEditSessionDay();
-    $this->addSessionDayForm = false;
-    $this->session_days = [];
-}
-
-public function cancelEditSessionDay()
-{
-    $this->editingSessionDayId = null;
-    $this->add_session_day = null;
-    $this->add_session_day_desc = null;
-    $this->resetValidation();
-}
-
-private function validateSessionDayFields()
-{
-    $this->add_session_day = trim((string) $this->add_session_day);
-
-    $this->validate([
-        'add_session_day' => 'required|string|max:255',
-        'add_session_day_desc' => 'nullable|string|max:255',
-    ]);
-
-    $query = SessionDays::where('event_id', $this->event->id)
-        ->where('session_day', $this->add_session_day);
-
-    if ($this->editingSessionDayId !== null) {
-        $query->where('id', '!=', $this->editingSessionDayId);
+    // SESSION DAYS
+    private function loadSessionDays()
+    {
+        $this->session_days = SessionDays::where('event_id', $this->event->id)
+            ->orderBy('id')
+            ->get()
+            ->map(function ($day) {
+                return [
+                    'id' => $day->id,
+                    'session_day' => $day->session_day,
+                    'description' => $day->description,
+                ];
+            })
+            ->toArray();
     }
 
-    if ($query->exists()) {
-        $this->addError(
-            'add_session_day',
-            'This session day already exists for this event.'
-        );
-
-        return false;
+    public function showAddSessionDay()
+    {
+        $this->cancelEditSessionDay();
+        $this->loadSessionDays();
+        $this->addSessionDayForm = true;
     }
 
-    return true;
-}
-
-public function addSessionDay()
-{
-    // Prevent accidentally adding a new day while editing.
-    if ($this->editingSessionDayId !== null) {
-        return;
+    public function resetAddSessionDayFields()
+    {
+        $this->cancelEditSessionDay();
+        $this->addSessionDayForm = false;
+        $this->session_days = [];
     }
 
-    if (!$this->validateSessionDayFields()) {
-        return;
+    public function cancelEditSessionDay()
+    {
+        $this->editingSessionDayId = null;
+        $this->add_session_day = null;
+        $this->add_session_day_desc = null;
+        $this->resetValidation();
     }
 
-    SessionDays::create([
-        'event_id' => $this->event->id,
-        'session_day' => $this->add_session_day,
-        'description' => $this->add_session_day_desc ?: null,
-    ]);
+    private function validateSessionDayFields()
+    {
+        $this->add_session_day = trim((string) $this->add_session_day);
 
-    $this->cancelEditSessionDay();
-    $this->loadSessionDays();
-}
-
-public function editSessionDay($id)
-{
-    $day = SessionDays::where('event_id', $this->event->id)
-        ->where('id', $id)
-        ->firstOrFail();
-
-    $this->resetValidation();
-
-    $this->editingSessionDayId = $day->id;
-    $this->add_session_day = $day->session_day;
-    $this->add_session_day_desc = $day->description;
-}
-
-public function updateSessionDay()
-{
-    if ($this->editingSessionDayId === null) {
-        return;
-    }
-
-    if (!$this->validateSessionDayFields()) {
-        return;
-    }
-
-    $newName = $this->add_session_day;
-
-    $oldName = DB::transaction(function () use ($newName) {
-        $day = SessionDays::where('event_id', $this->event->id)
-            ->where('id', $this->editingSessionDayId)
-            ->lockForUpdate()
-            ->firstOrFail();
-
-        $oldName = $day->session_day;
-
-        $day->session_day = $newName;
-        $day->description = $this->add_session_day_desc ?: null;
-        $day->save();
-
-        // Sessions store the day label directly, so rename it there too.
-        if ($oldName !== $newName) {
-            Sessions::where('event_id', $this->event->id)
-                ->where('session_day', $oldName)
-                ->update([
-                    'session_day' => $newName,
-                ]);
-        }
-
-        return $oldName;
-    });
-
-    // Refresh the session labels already displayed on this page.
-    foreach ($this->finalListOfSessions as $index => $session) {
-        if ($session['session_day'] === $oldName) {
-            $this->finalListOfSessions[$index]['session_day'] = $newName;
-        }
-    }
-
-    // Refresh choices in case the Add Session form was already loaded.
-    $this->sessionDayChoices = SessionDays::where(
-        'event_id',
-        $this->event->id
-    )->orderBy('id')->pluck('session_day')->toArray();
-
-    if ($this->session_day === $oldName) {
-        $this->session_day = $newName;
-    }
-
-    $this->cancelEditSessionDay();
-    $this->loadSessionDays();
-
-    $this->dispatchBrowserEvent('swal:success', [
-        'type' => 'success',
-        'message' => 'Session day updated successfully!',
-        'text' => '',
-    ]);
-}
-
-public function deleteSessionDay($arrayIndex)
-{
-    if (!isset($this->session_days[$arrayIndex])) {
-        return;
-    }
-
-    $id = $this->session_days[$arrayIndex]['id'];
-
-    $day = SessionDays::where('event_id', $this->event->id)
-        ->where('id', $id)
-        ->firstOrFail();
-
-    // Avoid deleting a day that existing sessions still use.
-    $isUsed = Sessions::where('event_id', $this->event->id)
-        ->where('session_day', $day->session_day)
-        ->exists();
-
-    if ($isUsed) {
-        $this->dispatchBrowserEvent('swal:success', [
-            'type' => 'warning',
-            'message' => 'This day is used by existing sessions.',
-            'text' => 'Edit the day instead, or reassign its sessions before deleting.',
+        $this->validate([
+            'add_session_day' => 'required|string|max:255',
+            'add_session_day_desc' => 'nullable|string|max:255',
         ]);
 
-        return;
+        $query = SessionDays::where('event_id', $this->event->id)
+            ->where('session_day', $this->add_session_day);
+
+        if ($this->editingSessionDayId !== null) {
+            $query->where('id', '!=', $this->editingSessionDayId);
+        }
+
+        if ($query->exists()) {
+            $this->addError(
+                'add_session_day',
+                'This session day already exists for this event.'
+            );
+
+            return false;
+        }
+
+        return true;
     }
 
-    $day->delete();
+    public function addSessionDay()
+    {
+        // Prevent accidentally adding a new day while editing.
+        if ($this->editingSessionDayId !== null) {
+            return;
+        }
 
-    if ((string) $this->editingSessionDayId === (string) $id) {
+        if (!$this->validateSessionDayFields()) {
+            return;
+        }
+
+        SessionDays::create([
+            'event_id' => $this->event->id,
+            'session_day' => $this->add_session_day,
+            'description' => $this->add_session_day_desc ?: null,
+        ]);
+
         $this->cancelEditSessionDay();
+        $this->loadSessionDays();
     }
 
-    $this->loadSessionDays();
-}
+    public function editSessionDay($id)
+    {
+        $day = SessionDays::where('event_id', $this->event->id)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $this->resetValidation();
+
+        $this->editingSessionDayId = $day->id;
+        $this->add_session_day = $day->session_day;
+        $this->add_session_day_desc = $day->description;
+    }
+
+    public function updateSessionDay()
+    {
+        if ($this->editingSessionDayId === null) {
+            return;
+        }
+
+        if (!$this->validateSessionDayFields()) {
+            return;
+        }
+
+        $newName = $this->add_session_day;
+
+        $oldName = DB::transaction(function () use ($newName) {
+            $day = SessionDays::where('event_id', $this->event->id)
+                ->where('id', $this->editingSessionDayId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $oldName = $day->session_day;
+
+            $day->session_day = $newName;
+            $day->description = $this->add_session_day_desc ?: null;
+            $day->save();
+
+            // Sessions store the day label directly, so rename it there too.
+            if ($oldName !== $newName) {
+                Sessions::where('event_id', $this->event->id)
+                    ->where('session_day', $oldName)
+                    ->update([
+                        'session_day' => $newName,
+                    ]);
+            }
+
+            return $oldName;
+        });
+
+        // Refresh the session labels already displayed on this page.
+        foreach ($this->finalListOfSessions as $index => $session) {
+            if ($session['session_day'] === $oldName) {
+                $this->finalListOfSessions[$index]['session_day'] = $newName;
+            }
+        }
+
+        // Refresh choices in case the Add Session form was already loaded.
+        $this->sessionDayChoices = SessionDays::where(
+            'event_id',
+            $this->event->id
+        )->orderBy('id')->pluck('session_day')->toArray();
+
+        if ($this->session_day === $oldName) {
+            $this->session_day = $newName;
+        }
+
+        $this->cancelEditSessionDay();
+        $this->loadSessionDays();
+
+        $this->dispatchBrowserEvent('swal:success', [
+            'type' => 'success',
+            'message' => 'Session day updated successfully!',
+            'text' => '',
+        ]);
+    }
+
+    public function deleteSessionDay($arrayIndex)
+    {
+        if (!isset($this->session_days[$arrayIndex])) {
+            return;
+        }
+
+        $id = $this->session_days[$arrayIndex]['id'];
+
+        $day = SessionDays::where('event_id', $this->event->id)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        // Avoid deleting a day that existing sessions still use.
+        $isUsed = Sessions::where('event_id', $this->event->id)
+            ->where('session_day', $day->session_day)
+            ->exists();
+
+        if ($isUsed) {
+            $this->dispatchBrowserEvent('swal:success', [
+                'type' => 'warning',
+                'message' => 'This day is used by existing sessions.',
+                'text' => 'Edit the day instead, or reassign its sessions before deleting.',
+            ]);
+
+            return;
+        }
+
+        $day->delete();
+
+        if ((string) $this->editingSessionDayId === (string) $id) {
+            $this->cancelEditSessionDay();
+        }
+
+        $this->loadSessionDays();
+    }
 
     // ADD SESSION TYPES
     public function showAddSessionType()

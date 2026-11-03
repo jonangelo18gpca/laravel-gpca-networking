@@ -52,6 +52,8 @@ trait HasWordPressSessionCreation
 
     public function previewWordPressCreates()
     {
+        $this->assertDataSyncAdmin();
+
         $this->clearWordPressCreatePreview();
 
         try {
@@ -108,6 +110,8 @@ trait HasWordPressSessionCreation
 
     public function createReviewedWordPressSessions()
     {
+
+    $this->assertDataSyncAdmin();
         $this->wpCreatePreviewError = '';
         $this->wpCreateSuccess = '';
 

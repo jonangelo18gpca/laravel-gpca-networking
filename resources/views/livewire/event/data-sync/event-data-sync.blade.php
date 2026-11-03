@@ -10,7 +10,10 @@
         </p>
     </div>
 
-    <div class="space-y-4">
+        <div class="space-y-4">
+        {{-- Shared WordPress website settings --}}
+        @include('livewire.event.data-sync.wordpress-general-settings')
+<br>
         {{-- Speakers --}}
         <details
             wire:ignore.self
@@ -122,7 +125,7 @@
                             class="border-t border-gray-100">
 
                             <summary class="cursor-pointer py-3 text-sm font-medium text-gray-700">
-                                Source settings
+                            Agenda settings
                             </summary>
 
                             <div class="pb-3">

@@ -19,6 +19,8 @@ class SpeakersList extends Component
     public $event, $salutations;
 
     public $finalListOfSpeakers = array();
+    public $speakerCategoryFilter = '';
+
 
     // Speaker datetime
     public $speakerId, $speakerDateTime, $speakerArrayIndex;
@@ -125,6 +127,7 @@ class SpeakersList extends Component
 
             $this->finalListOfSpeakers[] = [
                 'id' => $speaker->id,
+                'feature_id' => (int) $speaker->feature_id,
                 'pfp' => $speakerPFPUrl,
                 'name' => $speaker->salutation . ' '
                     . $speaker->first_name . ' '
@@ -141,6 +144,120 @@ class SpeakersList extends Component
         }
     }
 
+    // public function reorderSpeakers($items)
+    // {
+    //     abort_unless(
+    //         session('userType') === 'gpcaAdmin',
+    //         403,
+    //         'Only GPCA administrators can reorder speakers.'
+    //     );
+
+    //     Validator::make(['items' => $items], [
+    //         'items' => 'required|array|min:1',
+    //         'items.*' => 'required|array',
+    //         'items.*.value' => 'required|integer|min:1|distinct',
+    //         'items.*.order' => 'required|integer|min:1|distinct',
+    //     ])->validate();
+
+    //     $orderedItems = collect($items)
+    //         ->sortBy('order')
+    //         ->values();
+
+    //     $positions = $orderedItems
+    //         ->pluck('order')
+    //         ->map(fn($order) => (int) $order)
+    //         ->all();
+
+    //     abort_unless(
+    //         $positions === range(1, $orderedItems->count()),
+    //         422,
+    //         'Invalid speaker positions.'
+    //     );
+
+    //     $orderedIds = $orderedItems
+    //         ->pluck('value')
+    //         ->map(fn($id) => (int) $id)
+    //         ->all();
+
+    //     DB::transaction(function () use ($orderedIds) {
+    //         $speakers = Speakers::where('event_id', $this->event->id)
+    //             ->orderBy('datetime_added', 'ASC')
+    //             ->orderBy('id', 'ASC')
+    //             ->lockForUpdate()
+    //             ->get();
+
+    //         $currentIds = $speakers
+    //             ->pluck('id')
+    //             ->map(fn($id) => (int) $id)
+    //             ->sort()
+    //             ->values()
+    //             ->all();
+
+    //         $submittedIds = collect($orderedIds)
+    //             ->sort()
+    //             ->values()
+    //             ->all();
+
+    //         abort_unless(
+    //             $currentIds === $submittedIds,
+    //             422,
+    //             'The speaker list has changed. Refresh the page and try again.'
+    //         );
+
+    //         $dateSlots = [];
+    //         $previousDate = null;
+
+    //         foreach ($speakers as $speaker) {
+    //             abort_if(
+    //                 empty($speaker->datetime_added),
+    //                 422,
+    //                 'Each speaker must have a date before reordering.'
+    //             );
+
+    //             $date = Carbon::parse($speaker->datetime_added)
+    //                 ->startOfSecond();
+
+    //             if ($previousDate && $date->lessThanOrEqualTo($previousDate)) {
+    //                 $date = $previousDate->copy()->addSecond();
+    //             }
+
+    //             $dateSlots[] = $date->format('Y-m-d H:i:s');
+    //             $previousDate = $date;
+    //         }
+
+    //         // foreach ($orderedIds as $index => $speakerId) {
+    //         //     // Speakers::where('event_id', $this->event->id)
+    //         //     //     ->where('id', $speakerId)
+    //         //     //     ->update([
+    //         //     //         'datetime_added' => $dateSlots[$index],
+    //         //     //     ]);
+
+    //         //     $this->validate([
+    //         //         'speakerDateTime' => 'required|date',
+    //         //     ]);
+    //         // }
+
+    //         foreach ($orderedIds as $index => $speakerId) {
+    //             Speakers::where('event_id', $this->event->id)
+    //                 ->where('id', $speakerId)
+    //                 ->update([
+    //                     'datetime_added' => $dateSlots[$index],
+    //                 ]);
+    //         }
+    //     });
+
+    //     $this->resetEditSpeakerDateTimeFields();
+    //     $this->activeDeleteIndex = null;
+    //     $this->loadSpeakers();
+
+    //     $this->dispatchBrowserEvent('swal:success', [
+    //         'type' => 'success',
+    //         'message' => 'Speaker order updated successfully!',
+    //         'text' => '',
+    //     ]);
+    // }
+
+
     public function reorderSpeakers($items)
     {
         abort_unless(
@@ -155,6 +272,14 @@ class SpeakersList extends Component
             'items.*.value' => 'required|integer|min:1|distinct',
             'items.*.order' => 'required|integer|min:1|distinct',
         ])->validate();
+
+        $filter = (string) $this->speakerCategoryFilter;
+
+        abort_unless(
+            $filter === '' || ctype_digit($filter),
+            422,
+            'Invalid speaker category.'
+        );
 
         $orderedItems = collect($items)
             ->sortBy('order')
@@ -176,12 +301,22 @@ class SpeakersList extends Component
             ->map(fn($id) => (int) $id)
             ->all();
 
-        DB::transaction(function () use ($orderedIds) {
-            $speakers = Speakers::where('event_id', $this->event->id)
+        DB::transaction(function () use ($filter, $orderedIds) {
+            Events::whereKey($this->event->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $allSpeakers = Speakers::where('event_id', $this->event->id)
                 ->orderBy('datetime_added', 'ASC')
                 ->orderBy('id', 'ASC')
                 ->lockForUpdate()
                 ->get();
+
+            $speakers = $filter === ''
+                ? $allSpeakers
+                : $allSpeakers->filter(function ($speaker) use ($filter) {
+                    return (string) (int) $speaker->feature_id === $filter;
+                })->values();
 
             $currentIds = $speakers
                 ->pluck('id')
@@ -201,6 +336,36 @@ class SpeakersList extends Component
                 'The speaker list has changed. Refresh the page and try again.'
             );
 
+            /*
+         * Filtered ordering requires unique global date slots so other
+         * categories keep their positions in the combined list.
+         */
+            if ($filter !== '') {
+                $previousDate = null;
+
+                foreach ($allSpeakers as $speaker) {
+                    abort_if(
+                        empty($speaker->datetime_added),
+                        422,
+                        'Select All categories and reorder once first.'
+                    );
+
+                    $date = Carbon::parse($speaker->datetime_added)
+                        ->startOfSecond();
+
+                    abort_if(
+                        $previousDate !== null
+                            && $date->lessThanOrEqualTo($previousDate),
+                        422,
+                        'Some speakers share the same date and time. '
+                            . 'Select All categories and reorder once first, '
+                            . 'then filter again.'
+                    );
+
+                    $previousDate = $date;
+                }
+            }
+
             $dateSlots = [];
             $previousDate = null;
 
@@ -214,7 +379,12 @@ class SpeakersList extends Component
                 $date = Carbon::parse($speaker->datetime_added)
                     ->startOfSecond();
 
-                if ($previousDate && $date->lessThanOrEqualTo($previousDate)) {
+                // Normalize duplicate timestamps only for the complete list.
+                if (
+                    $filter === ''
+                    && $previousDate !== null
+                    && $date->lessThanOrEqualTo($previousDate)
+                ) {
                     $date = $previousDate->copy()->addSecond();
                 }
 
@@ -222,25 +392,13 @@ class SpeakersList extends Component
                 $previousDate = $date;
             }
 
-            // foreach ($orderedIds as $index => $speakerId) {
-            //     // Speakers::where('event_id', $this->event->id)
-            //     //     ->where('id', $speakerId)
-            //     //     ->update([
-            //     //         'datetime_added' => $dateSlots[$index],
-            //     //     ]);
-
-            //     $this->validate([
-            //         'speakerDateTime' => 'required|date',
-            //     ]);
-            // }
-
             foreach ($orderedIds as $index => $speakerId) {
-    Speakers::where('event_id', $this->event->id)
-        ->where('id', $speakerId)
-        ->update([
-            'datetime_added' => $dateSlots[$index],
-        ]);
-}
+                Speakers::where('event_id', $this->event->id)
+                    ->where('id', $speakerId)
+                    ->update([
+                        'datetime_added' => $dateSlots[$index],
+                    ]);
+            }
         });
 
         $this->resetEditSpeakerDateTimeFields();
@@ -250,19 +408,62 @@ class SpeakersList extends Component
         $this->dispatchBrowserEvent('swal:success', [
             'type' => 'success',
             'message' => 'Speaker order updated successfully!',
-            'text' => '',
+            'text' => $filter === ''
+                ? ''
+                : 'Only the selected category was reordered.',
         ]);
     }
 
 
+    // public function render()
+    // {
+    //     return view('livewire.event.speakers.speakers-list');
+    // }
+
+
+
     public function render()
     {
-        return view('livewire.event.speakers.speakers-list');
+        $filter = (string) $this->speakerCategoryFilter;
+
+        $filteredSpeakers = $this->finalListOfSpeakers;
+
+        if ($filter !== '') {
+            $filteredSpeakers = array_filter(
+                $this->finalListOfSpeakers,
+                function ($speaker) use ($filter) {
+                    return (string) $speaker['feature_id'] === $filter;
+                }
+            );
+        }
+
+        $speakerFilterFeatures = Features::where(
+            'event_id',
+            $this->event->id
+        )
+            ->orderBy('id')
+            ->get(['id', 'short_name']);
+
+        $canReorderSpeakers =
+            session('userType') === 'gpcaAdmin';
+
+        return view('livewire.event.speakers.speakers-list', [
+            'filteredSpeakers' => $filteredSpeakers,
+            'speakerFilterFeatures' => $speakerFilterFeatures,
+            'canReorderSpeakers' => $canReorderSpeakers,
+        ]);
+    }
+
+    public function updatedSpeakerCategoryFilter()
+    {
+        $this->activeDeleteIndex = null;
+        $this->resetEditSpeakerDateTimeFields();
     }
 
 
     public function showAddSpeakerType()
     {
+        
         return redirect()->route('admin.event.speaker.types.view', ['eventCategory' => $this->event->category, 'eventId' => $this->event->id]);
     }
 
@@ -272,8 +473,8 @@ class SpeakersList extends Component
     {
         // $speakerDateTime = Speakers::where('id', $speakerId)->value('datetime_added');
         $speakerDateTime = Speakers::where('event_id', $this->event->id)
-    ->where('id', $speakerId)
-    ->value('datetime_added');
+            ->where('id', $speakerId)
+            ->value('datetime_added');
 
         $this->speakerId = $speakerId;
         $this->speakerDateTime = $speakerDateTime;
@@ -314,32 +515,35 @@ class SpeakersList extends Component
 
 
     public function editSpeakerDateTime()
-{
-    $this->validate([
-        'speakerDateTime' => 'required|date',
-    ]);
-
-    Speakers::where('event_id', $this->event->id)
-        ->where('id', $this->speakerId)
-        ->update([
-            'datetime_added' => $this->speakerDateTime,
+    {
+        $this->validate([
+            'speakerDateTime' => 'required|date',
         ]);
 
-    $this->loadSpeakers();
-    $this->resetEditSpeakerDateTimeFields();
+        Speakers::where('event_id', $this->event->id)
+            ->where('id', $this->speakerId)
+            ->update([
+                'datetime_added' => $this->speakerDateTime,
+            ]);
 
-    $this->dispatchBrowserEvent('swal:success', [
-        'type' => 'success',
-        'message' => 'Speaker Datetime updated successfully!',
-        'text' => '',
-    ]);
-}
+        $this->loadSpeakers();
+        $this->resetEditSpeakerDateTimeFields();
+
+        $this->dispatchBrowserEvent('swal:success', [
+            'type' => 'success',
+            'message' => 'Speaker Datetime updated successfully!',
+            'text' => '',
+        ]);
+    }
 
 
 
     // ADD SPEAKER
     public function showAddSpeaker()
     {
+
+    $this->categoryChoices = [];
+$this->typeChoices = [];
         $speakerTypes = SpeakerTypes::where('event_id', $this->event->id)->get();
 
         if ($speakerTypes->isNotEmpty()) {
@@ -463,7 +667,7 @@ class SpeakersList extends Component
 
             // 'datetime_added' => Carbon::now(),
             'datetime_added' => $newSpeakerDate,
-            
+
         ]);
 
         foreach ($this->categoryChoices as $categoryChoice) {
@@ -586,18 +790,98 @@ class SpeakersList extends Component
         ]);
     }
 
+    // public function deleteSpeaker()
+    // {
+    //     $speaker = Speakers::where('id', $this->finalListOfSpeakers[$this->activeDeleteIndex]['id'])->first();
+
+    //     if ($speaker) {
+    //         if ($speaker->pfp_media_id) {
+    //             mediaUsageUpdate(
+    //                 MediaUsageUpdateTypes::REMOVED_ONLY->value,
+    //                 $speaker->pfp_media_id,
+    //                 MediaEntityTypes::SPEAKER_PFP->value,
+    //                 $speaker->id,
+    //                 getMediaUsageId($speaker->pfp_media_id, MediaEntityTypes::SPEAKER_PFP->value, $speaker->id),
+    //             );
+    //         }
+
+    //         if ($speaker->cover_photo_media_id) {
+    //             mediaUsageUpdate(
+    //                 MediaUsageUpdateTypes::REMOVED_ONLY->value,
+    //                 $speaker->cover_photo_media_id,
+    //                 MediaEntityTypes::SPEAKER_COVER_PHOTO->value,
+    //                 $speaker->id,
+    //                 getMediaUsageId($speaker->cover_photo_media_id, MediaEntityTypes::SPEAKER_COVER_PHOTO->value, $speaker->id),
+    //             );
+    //         }
+
+    //         $speaker->delete();
+
+    //         unset($this->finalListOfSpeakers[$this->activeDeleteIndex]);
+    //         $this->finalListOfSpeakers = array_values($this->finalListOfSpeakers);
+    //     }
+
+    //     $this->dispatchBrowserEvent('swal:success', [
+    //         'type' => 'success',
+    //         'message' => 'Speaker deleted successfully!',
+    //         'text' => ''
+    //     ]);
+    // }
+
+
     public function deleteSpeaker()
     {
-        $speaker = Speakers::where('id', $this->finalListOfSpeakers[$this->activeDeleteIndex]['id'])->first();
+        abort_unless(
+            session('userType') === 'gpcaAdmin',
+            403,
+            'Only GPCA administrators can delete speakers.'
+        );
 
-        if ($speaker) {
+        $index = $this->activeDeleteIndex;
+
+        if (
+            !is_scalar($index)
+            || !ctype_digit((string) $index)
+            || !isset($this->finalListOfSpeakers[$index]['id'])
+        ) {
+            $this->dispatchBrowserEvent('swal:success', [
+                'type' => 'warning',
+                'message' => 'The speaker list has changed.',
+                'text' => 'Refresh the page and select the speaker again.',
+            ]);
+
+            return;
+        }
+
+        $eventId = (int) $this->event->id;
+        $speakerId = (int) $this->finalListOfSpeakers[$index]['id'];
+
+        DB::transaction(function () use ($eventId, $speakerId) {
+            Events::whereKey($eventId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $speaker = Speakers::where('event_id', $eventId)
+                ->whereKey($speakerId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            DB::table('wordpress_speaker_links')
+                ->where('event_id', $eventId)
+                ->where('speaker_id', $speaker->id)
+                ->delete();
+
             if ($speaker->pfp_media_id) {
                 mediaUsageUpdate(
                     MediaUsageUpdateTypes::REMOVED_ONLY->value,
                     $speaker->pfp_media_id,
                     MediaEntityTypes::SPEAKER_PFP->value,
                     $speaker->id,
-                    getMediaUsageId($speaker->pfp_media_id, MediaEntityTypes::SPEAKER_PFP->value, $speaker->id),
+                    getMediaUsageId(
+                        $speaker->pfp_media_id,
+                        MediaEntityTypes::SPEAKER_PFP->value,
+                        $speaker->id
+                    )
                 );
             }
 
@@ -607,20 +891,32 @@ class SpeakersList extends Component
                     $speaker->cover_photo_media_id,
                     MediaEntityTypes::SPEAKER_COVER_PHOTO->value,
                     $speaker->id,
-                    getMediaUsageId($speaker->cover_photo_media_id, MediaEntityTypes::SPEAKER_COVER_PHOTO->value, $speaker->id),
+                    getMediaUsageId(
+                        $speaker->cover_photo_media_id,
+                        MediaEntityTypes::SPEAKER_COVER_PHOTO->value,
+                        $speaker->id
+                    )
                 );
             }
 
-            $speaker->delete();
+            if ($speaker->delete() === false) {
+                throw new \RuntimeException(
+                    'Speaker deletion was cancelled. No sync link was removed.'
+                );
+            }
+        });
 
-            unset($this->finalListOfSpeakers[$this->activeDeleteIndex]);
-            $this->finalListOfSpeakers = array_values($this->finalListOfSpeakers);
-        }
+        $this->activeDeleteIndex = null;
+        $this->resetEditSpeakerDateTimeFields();
+        $this->loadSpeakers();
 
         $this->dispatchBrowserEvent('swal:success', [
             'type' => 'success',
             'message' => 'Speaker deleted successfully!',
-            'text' => ''
+            'text' =>
+            'Its WordPress sync link was removed. '
+                . 'If the WordPress record is still published and eligible, '
+                . 'reload the missing-speaker preview to import it again.',
         ]);
     }
 }

@@ -1,12 +1,14 @@
 <div>
-    {{-- Source selection --}}
+
+    
+       {{-- Source selection --}}
     <div class="py-4">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="md:col-span-2">
                 <label
                     for="wp-speaker-source"
                     class="block text-sm font-medium text-gray-700 mb-2">
-                    Speaker source
+                    Speaker Feature
                 </label>
 
                 <select
@@ -15,16 +17,44 @@
                     wire:loading.attr="disabled"
                     wire:target="loadWordPressSpeakerPreview"
                     class="border border-gray-300 rounded-lg px-3 py-2 w-full">
-                    <option value="">Select a source</option>
 
-                    <option value="main_plenary_speaker">
-                        Main plenary speakers
-                    </option>
+                    <option value="">Select a speaker feature</option>
 
-                    <option value="suspav-speaker">
-                        Sustainability Pavilion speakers
-                    </option>
+                    @foreach ($this->wpSpeakerSourceChoices as $choice)
+                        <option value="{{ $choice['post_type'] }}">
+                            {{ $choice['label'] }}
+                            — {{ $choice['post_type'] }}
+                        </option>
+                    @endforeach
+
+                    @if (
+                        $wpSpeakerSource !== ''
+                        && !in_array(
+                            $wpSpeakerSource,
+                            array_column(
+                                $this->wpSpeakerSourceChoices,
+                                'post_type'
+                            ),
+                            true
+                        )
+                    )
+                        <option value="{{ $wpSpeakerSource }}">
+                            Unsaved source — {{ $wpSpeakerSource }}
+                        </option>
+                    @endif
                 </select>
+
+                <p class="text-xs text-gray-500 mt-2">
+                    Saved speaker sources for this event, website and year.
+                    Website: {{ $wpSourceUrl ?: 'Not configured in General Settings' }}
+                </p>
+
+                @if (count($this->wpSpeakerSourceChoices) === 0)
+                    <p class="text-sm text-gray-500 mt-2">
+                        No saved speaker features for this website and year.
+                        Use Configure a speaker source below for initial setup.
+                    </p>
+                @endif
 
                 @error('wpSpeakerSource')
                     <p class="text-sm text-red-600 mt-2">
@@ -57,6 +87,42 @@
                 @enderror
             </div>
         </div>
+
+        {{-- First-time source setup --}}
+        <details
+            wire:ignore.self
+            class="mt-4 border border-gray-200 rounded-lg">
+
+            <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-gray-600">
+                Configure a speaker source
+            </summary>
+
+            <div class="px-4 pb-4">
+                <label
+                    for="wp-speaker-post-type"
+                    class="block text-sm font-medium text-gray-700 mb-2">
+                    WordPress speaker post-type slug
+                </label>
+
+                <input
+                    id="wp-speaker-post-type"
+                    type="text"
+                    maxlength="100"
+                    wire:model.lazy="wpSpeakerSource"
+                    wire:loading.attr="disabled"
+                    wire:target="loadWordPressSpeakerPreview"
+                    class="border border-gray-300 rounded-lg px-3 py-2 w-full">
+
+                <p class="text-xs text-gray-500 mt-2">
+                    Enter the speaker post-type slug from WordPress,
+                    then load the source. Under Setup &amp; maintenance,
+                    choose the destination category and speaker-type
+                    mappings, then save the speaker settings.
+                    The source will then appear in Speaker Feature
+                    using its category name.
+                </p>
+            </div>
+        </details>
 
         <div class="mt-3">
             <button

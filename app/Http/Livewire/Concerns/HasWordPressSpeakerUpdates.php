@@ -152,7 +152,8 @@ trait HasWordPressSpeakerUpdates
 
             $sourceRows = app(WordPressSpeakerPreview::class)->fetch(
                 $context['post_type'],
-                $context['year']
+                $context['year'],
+                $context['source_url']
             );
 
             $displayRows = [];
@@ -193,11 +194,29 @@ trait HasWordPressSpeakerUpdates
                     ->where('feature_id', $context['feature_id'])
                     ->whereKey($link->speaker_id)
                     ->first();
-
                 if (!$speaker) {
+                    $linkedSpeaker = Speaker::whereKey($link->speaker_id)->first();
+
+                    if (!$linkedSpeaker) {
+                        throw new RuntimeException(
+                            'WP #' . $wpId
+                                . ' links to missing App speaker #'
+                                . $link->speaker_id
+                                . '. The old sync link remains and needs cleanup '
+                                . 'before a fresh import.'
+                        );
+                    }
+
                     throw new RuntimeException(
-                        'A saved link points to a deleted or recategorized '
-                            . 'speaker. Repair it before proceeding.'
+                        'WP #' . $wpId
+                            . ' links to App speaker #' . $link->speaker_id
+                            . ', but that speaker belongs to event #'
+                            . $linkedSpeaker->event_id
+                            . ', category #' . $linkedSpeaker->feature_id
+                            . '. The selected destination is event #'
+                            . $context['event_id']
+                            . ', category #' . $context['feature_id']
+                            . '. Check the destination mapping; no link was removed.'
                     );
                 }
 
@@ -524,7 +543,8 @@ trait HasWordPressSpeakerUpdates
             foreach (
                 app(WordPressSpeakerPreview::class)->fetch(
                     $context['post_type'],
-                    $context['year']
+                    $context['year'],
+                    $context['source_url']
                 ) as $row
             ) {
                 $id = (int) $row['wp_id'];

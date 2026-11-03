@@ -77,9 +77,12 @@ trait HasWordPressAgendaSettings
 
     public function saveWordPressAgendaSettings()
     {
+
+      $this->assertDataSyncAdmin();
+
         // This action belongs behind the existing event-admin authorization.
         $event = Event::findOrFail($this->eventData['eventId']);
-        $this->wpSourceUrl = rtrim(trim((string) $this->wpSourceUrl), '/');
+        // $this->wpSourceUrl = rtrim(trim((string) $this->wpSourceUrl), '/');
         foreach ($this->wpAgendaSources as &$source) {
             $source['post_type'] = trim((string) ($source['post_type'] ?? ''));
         }
@@ -90,7 +93,7 @@ trait HasWordPressAgendaSettings
         unset($day);
 
         $this->validate([
-            'wpSourceUrl' => 'required|url|max:2048',
+            // 'wpSourceUrl' => 'required|url|max:2048',
             'wpAgendaYear' => 'required|digits:4',
             'wpAgendaSources' => 'required|array|min:1|max:30',
             'wpAgendaSources.*.post_type' => 'required|string|max:100|regex:/^[a-z0-9_-]+$/|distinct',
@@ -101,14 +104,18 @@ trait HasWordPressAgendaSettings
             'wpAgendaDays.*.session_date' => 'required|date_format:Y-m-d',
         ]);
 
-        $parts = parse_url($this->wpSourceUrl);
-        if (!$parts || ($parts['scheme'] ?? '') !== 'https' || empty($parts['host']) ||
-            isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) ||
-            isset($parts['fragment']) || (isset($parts['port']) && $parts['port'] !== 443)) {
-            throw ValidationException::withMessages(['wpSourceUrl' => 'Use an HTTPS WordPress base URL without credentials, query, fragment or nonstandard port. A subdirectory path is allowed.']);
-        }
+        // $parts = parse_url($this->wpSourceUrl);
+        // if (
+        //     !$parts || ($parts['scheme'] ?? '') !== 'https' || empty($parts['host']) ||
+        //     isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) ||
+        //     isset($parts['fragment']) || (isset($parts['port']) && $parts['port'] !== 443)
+        // ) {
+        //     throw ValidationException::withMessages(['wpSourceUrl' => 'Use an HTTPS WordPress base URL without credentials, query, fragment or nonstandard port. A subdirectory path is allowed.']);
+        // }
 
-        $featureIds = Feature::where('event_id', $event->id)->pluck('id')->map(function ($id) { return (int) $id; })->all();
+        $featureIds = Feature::where('event_id', $event->id)->pluck('id')->map(function ($id) {
+            return (int) $id;
+        })->all();
         $dateValues = SessionDate::where('event_id', $event->id)->get()->map(function ($row) {
             return \Carbon\Carbon::parse($row->session_date)->format('Y-m-d');
         })->all();
@@ -152,5 +159,76 @@ trait HasWordPressAgendaSettings
         ];
         $event->save();
         session()->flash('wordpressAgendaSettingsSaved', 'WordPress agenda settings saved. No sessions were changed.');
+    }
+
+
+    public function saveWordPressGeneralSettings()
+    {
+        $this->assertDataSyncAdmin();
+
+        $this->wpSourceUrl = rtrim(
+            trim((string) $this->wpSourceUrl),
+            '/'
+        );
+
+        $this->validate([
+            'wpSourceUrl' => 'required|url|max:2048',
+        ]);
+
+        $parts = parse_url($this->wpSourceUrl);
+
+        if (
+            !$parts
+            || ($parts['scheme'] ?? '') !== 'https'
+            || empty($parts['host'])
+            || isset($parts['user'])
+            || isset($parts['pass'])
+            || isset($parts['query'])
+            || isset($parts['fragment'])
+            || (
+                isset($parts['port'])
+                && (int) $parts['port'] !== 443
+            )
+        ) {
+            throw ValidationException::withMessages([
+                'wpSourceUrl' =>
+                'Use an HTTPS WordPress base URL without credentials, '
+                    . 'query, fragment or nonstandard port. '
+                    . 'A subdirectory path is allowed.',
+            ]);
+        }
+
+        $event = Event::findOrFail($this->eventData['eventId']);
+
+        $savedUrl = rtrim(
+            trim((string) $event->wordpress_source_url),
+            '/'
+        );
+
+        /*
+     * Changing a source website requires a separate review because
+     * saved speaker mappings and links include the website URL.
+     * Allow initial configuration and saving the same existing URL.
+     */
+        if ($savedUrl !== '' && $savedUrl !== $this->wpSourceUrl) {
+            throw ValidationException::withMessages([
+                'wpSourceUrl' =>
+                'This event already has a WordPress website configured. '
+                    . 'Changing websites requires a source-change review '
+                    . 'to protect existing mappings and links. '
+                    . 'For a new website, configure it on the new event.',
+            ]);
+        }
+
+        $event->wordpress_source_url = $this->wpSourceUrl;
+        $event->save();
+
+        $this->resetWordPressSpeakerPreview();
+
+        session()->flash(
+            'wordpressGeneralSettingsSaved',
+            'WordPress general settings saved. '
+                . 'No sessions, speaker profiles or links were changed.'
+        );
     }
 }

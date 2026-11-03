@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\Event;
 use App\Models\Session;
-use Carbon\Carbon;
+
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -94,16 +94,12 @@ class WordPressAgendaCreatePreview
                     continue;
                 }
 
-                $sameTitle = $this->titleKey($session->title) ===
-                    $this->titleKey($row['title']);
+                $sourceTitle = $this->titleKey($row['title']);
+                $appTitle = $this->titleKey($session->title);
 
-                $sameSlot =
-                    Carbon::parse($session->session_date)
-                    ->format('Y-m-d') === $row['date']
-                    && substr((string) $session->start_time, 0, 5) ===
-                    $row['start_time'];
-
-                if ($sameTitle || $sameSlot) {
+                // A shared start time alone does not identify a duplicate.
+                // Keep matching titles flagged for review, even if timing changed.
+                if ($sourceTitle !== '' && $appTitle === $sourceTitle) {
                     $candidates[] = (int) $session->id;
                 }
             }

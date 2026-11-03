@@ -31,6 +31,8 @@ trait HasWordPressAgendaLinking
     }
     public function loadWordPressAgendaLinking()
     {
+        $this->assertDataSyncAdmin();
+
         $this->wpLinkRows=[]; $this->wpLinkOptions=[]; $this->wpLinkSelections=[];
         $this->wpLinkExisting=[]; $this->wpLinkConfirmed=false; $this->wpLinkError='';
         $this->wpLinkSuccess=''; $this->wpLinkToken='';
@@ -86,6 +88,8 @@ trait HasWordPressAgendaLinking
     }
     public function saveWordPressAgendaLinks()
     {
+        $this->assertDataSyncAdmin();
+        
         $this->wpLinkError=''; $this->wpLinkSuccess='';
         try {
             if (!$this->wpLinkConfirmed) throw new RuntimeException('Review your selections and tick confirmation.');
@@ -132,4 +136,88 @@ trait HasWordPressAgendaLinking
             report($e); $this->wpLinkError=mb_substr($e->getMessage(),0,600);
         }
     }
+
+
+    public function repairMissingWordPressAgendaLink()
+{
+    $this->assertDataSyncAdmin();
+
+    $this->wpLinkError = '';
+    $this->wpLinkSuccess = '';
+
+    try {
+        $eventId = (int) $this->eventData['eventId'];
+
+        $removed = DB::transaction(function () use ($eventId) {
+            Event::whereKey($eventId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // Raw lookup includes any soft-deleted records.
+            $sessionExists = DB::table('sessions')
+                ->where('id', 11)
+                ->exists();
+
+            if ($sessionExists) {
+                throw new RuntimeException(
+                    'App session #11 still exists in the database. '
+                    . 'No link was removed. Check its event, category '
+                    . 'or deletion state.'
+                );
+            }
+
+            $links = DB::table('wordpress_agenda_links')
+                ->where('event_id', $eventId)
+                ->where('wordpress_post_id', 15209)
+                ->where('session_id', 11)
+                ->lockForUpdate()
+                ->get();
+
+            if ($links->count() > 1) {
+                throw new RuntimeException(
+                    'More than one matching link exists. '
+                    . 'No links were removed; review them first.'
+                );
+            }
+
+            if ($links->isEmpty()) {
+                return 0;
+            }
+
+            return DB::table('wordpress_agenda_links')
+                ->where('id', $links->first()->id)
+                ->where('event_id', $eventId)
+                ->where('wordpress_post_id', 15209)
+                ->where('session_id', 11)
+                ->delete();
+        });
+
+        $token = (string) $this->wpLinkToken;
+
+        if (preg_match('/^[A-Za-z0-9]{48}$/', $token)) {
+            Cache::forget($this->wpLinkCacheKey($token));
+        }
+
+        $this->wpLinkRows = [];
+        $this->wpLinkOptions = [];
+        $this->wpLinkSelections = [];
+        $this->wpLinkExisting = [];
+        $this->wpLinkToken = '';
+        $this->wpLinkConfirmed = false;
+
+        $this->wpLinkSuccess = $removed
+            ? 'The stale link for WP #15209 → App #11 was removed. '
+                . 'Reload the missing-session preview.'
+            : 'No matching stale link remains. '
+                . 'Reload the missing-session preview.';
+    } catch (\Throwable $exception) {
+        report($exception);
+
+        $this->wpLinkError = mb_substr(
+            $exception->getMessage(),
+            0,
+            600
+        );
+    }
+}
 }

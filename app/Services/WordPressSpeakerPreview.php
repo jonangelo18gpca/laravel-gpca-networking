@@ -14,11 +14,19 @@ class WordPressSpeakerPreview
         'suspav-speaker' => 'Sustainability Pavilion speakers',
     ];
 
-    public function fetch(string $source, string $year): array
-    {
-        if (!isset(self::SOURCES[$source])) {
-            throw new RuntimeException('Invalid speaker source.');
+    public function fetch(
+        string $source,
+        string $year,
+        string $sourceUrl
+    ): array {
+        if (
+            strlen($source) > 100
+            || !preg_match('/^[a-z0-9_-]+$/', $source)
+        ) {
+            throw new RuntimeException('Invalid speaker post-type slug.');
         }
+
+        [$base, $host, $pinned] = $this->resolveSourceWebsite($sourceUrl);
 
         if (!preg_match('/^\d{4}$/', $year)) {
             throw new RuntimeException('Enter a four-digit year.');
@@ -29,16 +37,41 @@ class WordPressSpeakerPreview
         $totalPages = 1;
 
         do {
+            // $response = Http::acceptJson()
+            //     ->connectTimeout(10)
+            //     ->timeout(30)
+            //     ->withOptions(['allow_redirects' => false])
+            //     ->get(
+            //         'https://www.gpcaforum.com/wp-json/wp/v2/' . $source,
+            //         [
+            //             'status' => 'publish',
+            //             'per_page' => 100,
+            //             'page' => $page,
+            //             '_embed' => 1,
+            //         ]
+            //     );
+
             $response = Http::acceptJson()
                 ->connectTimeout(10)
                 ->timeout(30)
-                ->withOptions(['allow_redirects' => false])
+                ->withOptions([
+                    'allow_redirects' => false,
+                    'verify' => true,
+                    'proxy' => '',
+                    'curl' => [
+                        CURLOPT_RESOLVE => [
+                            $host . ':443:' . $pinned,
+                        ],
+                    ],
+                ])
                 ->get(
-                    'https://www.gpcaforum.com/wp-json/wp/v2/' . $source,
+                    $base . '/wp-json/wp/v2/' . $source,
                     [
                         'status' => 'publish',
                         'per_page' => 100,
                         'page' => $page,
+                        'orderby' => 'id',
+                        'order' => 'asc',
                         '_embed' => 1,
                     ]
                 );
@@ -78,6 +111,16 @@ class WordPressSpeakerPreview
                     throw new RuntimeException('Invalid speaker record.');
                 }
 
+                if (!isset($post['status']) || !is_string($post['status'])) {
+                    throw new RuntimeException(
+                        'A speaker record is missing a valid publication status.'
+                    );
+                }
+
+                if ($post['status'] !== 'publish') {
+                    continue;
+                }
+
                 $meta = $post['meta'] ?? null;
 
                 if (!is_array($meta) || !array_key_exists('year', $meta)) {
@@ -105,6 +148,84 @@ class WordPressSpeakerPreview
         } while ($page <= $totalPages);
 
         return $rows;
+    }
+
+
+    private function resolveSourceWebsite(string $sourceUrl): array
+    {
+        $base = rtrim(trim($sourceUrl), '/');
+        $parts = parse_url($base);
+        $host = strtolower($parts['host'] ?? '');
+        $allowed = config('wordpress_agenda.allowed_hosts', []);
+
+        if (
+            !$parts
+            || ($parts['scheme'] ?? '') !== 'https'
+            || $host === ''
+            || !in_array($host, $allowed, true)
+            || isset($parts['user'])
+            || isset($parts['pass'])
+            || isset($parts['query'])
+            || isset($parts['fragment'])
+            || (
+                isset($parts['port'])
+                && (int) $parts['port'] !== 443
+            )
+        ) {
+            throw new RuntimeException(
+                'Source URL is not an approved HTTPS WordPress website. '
+                    . 'Check General Settings and '
+                    . 'config/wordpress_agenda.php.'
+            );
+        }
+
+        if (
+            !extension_loaded('curl')
+            || !function_exists('dns_get_record')
+        ) {
+            throw new RuntimeException(
+                'This preview requires PHP cURL and dns_get_record.'
+            );
+        }
+
+        $addresses = [];
+
+        foreach (
+            (array) dns_get_record($host, DNS_A | DNS_AAAA)
+            as $record
+        ) {
+            $ip = $record['ip'] ?? $record['ipv6'] ?? null;
+
+            if (!$ip) {
+                continue;
+            }
+
+            if (!filter_var(
+                $ip,
+                FILTER_VALIDATE_IP,
+                FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+            )) {
+                throw new RuntimeException(
+                    'Source DNS resolves to a non-public address.'
+                );
+            }
+
+            $addresses[] = $ip;
+        }
+
+        if (!$addresses) {
+            throw new RuntimeException(
+                'Cannot resolve the approved website.'
+            );
+        }
+
+        $ip = $addresses[0];
+
+        $pinned = strpos($ip, ':') !== false
+            ? '[' . $ip . ']'
+            : $ip;
+
+        return [$base, $host, $pinned];
     }
 
     private function normalize(array $post, array $meta): array
@@ -140,7 +261,7 @@ class WordPressSpeakerPreview
 
         $bio = $this->stringValue($meta['bio'] ?? '');
         $biographyHtml = app(WordPressSpeakerBiography::class)
-    ->sanitize($bio);
+            ->sanitize($bio);
 
         if ($this->plainText($bio) === '') {
             $warnings[] = 'Biography is empty; preserve any existing app biography.';

@@ -141,7 +141,8 @@ trait HasWordPressSpeakerCreation
             foreach (
                 app(WordPressSpeakerPreview::class)->fetch(
                     $context['post_type'],
-                    $context['year']
+                    $context['year'],
+                    $context['source_url']
                 ) as $sourceRow
             ) {
                 $wpId = (int) $sourceRow['wp_id'];
@@ -267,7 +268,7 @@ trait HasWordPressSpeakerCreation
                         'Biography exceeds the current TEXT column limit.'
                     );
                 }
-                
+
                 if (isset($photoIds[$wpId])) {
                     $freshPhotoUrl = (string) ($fresh['image_url'] ?? '');
 
@@ -489,7 +490,7 @@ trait HasWordPressSpeakerCreation
             });
 
             // Only discard the plan after the transaction commits.
-            $this->resetWordPressSpeakerCreation();
+
             $this->resetWordPressSpeakerLinking();
             $this->resetWordPressSpeakerUpdates();
             $this->resetWordPressSpeakerCreation();
@@ -602,7 +603,8 @@ trait HasWordPressSpeakerCreation
 
             $sourceRows = app(WordPressSpeakerPreview::class)->fetch(
                 $context['post_type'],
-                $context['year']
+                $context['year'],
+                $context['source_url']
             );
 
             $existingNames = [];
@@ -761,9 +763,11 @@ trait HasWordPressSpeakerCreation
                 $photoAllowed = $photoUrl !== ''
                     && $this->wpSpeakerProfileImageAllowed($photoUrl);
 
-                $warnings[] =
-                    'No allowed photo is available. '
-                    . 'This speaker will be created without a photo.';
+                if (!$photoAllowed) {
+                    $warnings[] =
+                        'No allowed photo is available. '
+                        . 'This speaker will be created without a photo.';
+                }
 
                 $canCreate = count($issues) === 0;
 

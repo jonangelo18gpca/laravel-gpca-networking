@@ -23,35 +23,84 @@ trait HasWordPressSpeakerSettings
         $this->wpSpeakerSettingsError = '';
     }
 
+    // protected function wpSpeakerSettingsIdentity()
+    // {
+    //     $source = (string) $this->wpSpeakerSource;
+    //     $year = (string) $this->wpSpeakerYear;
+
+    //     if (!isset(WordPressSpeakerPreview::SOURCES[$source])) {
+    //         throw new RuntimeException('Select a valid speaker source.');
+    //     }
+
+    //     if (!preg_match('/^\d{4}$/', $year)) {
+    //         throw new RuntimeException('Enter a four-digit year.');
+    //     }
+
+    //     $identity = [
+    //         'event_id' => (int) $this->eventData['eventId'],
+    //         'source_url' => 'https://www.gpcaforum.com',
+    //         'post_type' => $source,
+    //         'source_year' => $year,
+    //     ];
+
+    //     $identity['identity_hash'] = hash('sha256', json_encode([
+    //         $identity['event_id'],
+    //         $identity['source_url'],
+    //         $identity['post_type'],
+    //         $identity['source_year'],
+    //     ]));
+
+    //     return $identity;
+    // }
+
     protected function wpSpeakerSettingsIdentity()
-    {
-        $source = (string) $this->wpSpeakerSource;
-        $year = (string) $this->wpSpeakerYear;
+{
+    $event = Event::findOrFail($this->eventData['eventId']);
 
-        if (!isset(WordPressSpeakerPreview::SOURCES[$source])) {
-            throw new RuntimeException('Select a valid speaker source.');
-        }
+    $source = trim((string) $this->wpSpeakerSource);
+    $year = trim((string) $this->wpSpeakerYear);
 
-        if (!preg_match('/^\d{4}$/', $year)) {
-            throw new RuntimeException('Enter a four-digit year.');
-        }
+    $sourceUrl = rtrim(
+        trim((string) $event->wordpress_source_url),
+        '/'
+    );
 
-        $identity = [
-            'event_id' => (int) $this->eventData['eventId'],
-            'source_url' => 'https://www.gpcaforum.com',
-            'post_type' => $source,
-            'source_year' => $year,
-        ];
-
-        $identity['identity_hash'] = hash('sha256', json_encode([
-            $identity['event_id'],
-            $identity['source_url'],
-            $identity['post_type'],
-            $identity['source_year'],
-        ]));
-
-        return $identity;
+    if ($sourceUrl === '') {
+        throw new RuntimeException(
+            'Save the website under WordPress General Settings first.'
+        );
     }
+
+    if (
+        strlen($source) > 100
+        || !preg_match('/^[a-z0-9_-]+$/', $source)
+    ) {
+        throw new RuntimeException(
+            'Enter or select a valid speaker post-type slug.'
+        );
+    }
+
+    if (!preg_match('/^\d{4}$/', $year)) {
+        throw new RuntimeException('Enter a four-digit year.');
+    }
+
+    $identity = [
+        'event_id' => (int) $event->id,
+        'source_url' => $sourceUrl,
+        'post_type' => $source,
+        'source_year' => $year,
+    ];
+
+    $identity['identity_hash'] = hash('sha256', json_encode([
+        $identity['event_id'],
+        $identity['source_url'],
+        $identity['post_type'],
+        $identity['source_year'],
+    ]));
+
+    return $identity;
+}
+
 
     protected function restoreWordPressSpeakerSettings()
     {

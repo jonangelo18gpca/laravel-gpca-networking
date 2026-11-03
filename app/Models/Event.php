@@ -81,6 +81,7 @@ class Event extends Model
         'show_social_networkings' => 'boolean',
         'vertical_images_section' => 'array',
         'wordpress_agenda_config' => 'array',
+        
     ];
 
     public function eventLogo()
