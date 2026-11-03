@@ -7,6 +7,15 @@ use App\Http\Livewire\Concerns\HasWordPressAgendaPreview;
 use App\Http\Livewire\Concerns\HasWordPressAgendaLinking;
 use App\Http\Livewire\Concerns\HasWordPressLinkedUpdates;
 use App\Http\Livewire\Concerns\HasWordPressSessionCreation;
+use App\Http\Livewire\Concerns\HasWordPressSpeakerPreview;
+use App\Http\Livewire\Concerns\HasWordPressSpeakerMapping;
+use App\Http\Livewire\Concerns\HasWordPressSpeakerLinking;
+use App\Http\Livewire\Concerns\HasWordPressSpeakerUpdates;
+use App\Http\Livewire\Concerns\HasWordPressSpeakerSettings;
+use App\Http\Livewire\Concerns\HasWordPressSpeakerProfileFields;
+use App\Http\Livewire\Concerns\HasWordPressSpeakerCreation;
+
+
 use App\Models\Event;
 use Livewire\Component;
 
@@ -17,6 +26,14 @@ class EventDataSync extends Component
     use HasWordPressAgendaLinking;
     use HasWordPressLinkedUpdates;
     use HasWordPressSessionCreation;
+    use HasWordPressSpeakerPreview;
+    use HasWordPressSpeakerMapping;
+    use HasWordPressSpeakerLinking;
+    use HasWordPressSpeakerUpdates;
+    use HasWordPressSpeakerSettings;
+    use HasWordPressSpeakerProfileFields;
+    use HasWordPressSpeakerCreation;
+
 
     public $eventData = [];
 

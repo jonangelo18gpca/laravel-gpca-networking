@@ -437,7 +437,7 @@ return [
     ],
     
     'salutations' => [
-        'Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Eng.', 'Prof.',
+       'Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Eng.', 'Prof.', 'H.E.',
     ],
 
     'eventCategories' => [

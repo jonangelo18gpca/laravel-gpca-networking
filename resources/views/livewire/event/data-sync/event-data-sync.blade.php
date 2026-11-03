@@ -1,84 +1,150 @@
-
-
 <div>
+    {{-- Page heading --}}
     <div class="mb-6">
         <h1 class="text-headingTextColor text-3xl font-bold">
             Data Sync
         </h1>
 
-        <p class="mt-2 text-gray-600">
-            Preview website changes for linked app sessions.
-            Unlinked records are left untouched.
+        <p class="mt-2 text-sm text-gray-500">
+            Preview WordPress changes before applying them to the app.
         </p>
     </div>
 
-    {{-- Main everyday workflow --}}
-    <div class="border border-primaryColor rounded-2xl py-5 px-7">
-        <h2 class="text-headingTextColor text-2xl font-bold">
-            Sync sessions
-        </h2>
+    <div class="space-y-4">
+        {{-- Speakers --}}
+        <details
+            wire:ignore.self
+            class="border border-gray-200 rounded-xl bg-white">
 
-        <label for="wp-sync-feature" class="block mt-4 mb-2">
-            Agenda feature
-        </label>
+            <summary class="cursor-pointer px-5 py-4 text-lg font-semibold text-headingTextColor">
+                Speakers
+                <span class="ml-2 text-xs font-normal text-gray-500">
+                    Import & update profiles
+                </span>
+            </summary>
 
-        <select
-            id="wp-sync-feature"
-            wire:model="wpPreviewPostType"
-            class="border rounded p-2 w-full">
-            <option value="">Select a feature</option>
+            <div class="border-t border-gray-100 px-5 pb-5">
+                @include('livewire.event.data-sync.speaker-preview')
+            </div>
+        </details>
 
-            @foreach ($this->wpPreviewSourceChoices as $choice)
-                <option value="{{ $choice['post_type'] }}">
-                    {{ $choice['label'] }}
-                </option>
-            @endforeach
-        </select>
+        {{-- Sessions --}}
+        <details
+            wire:ignore.self
+            class="border border-gray-200 rounded-xl bg-white">
 
-        <p class="mt-3 text-sm text-gray-600">
-            The preview fetches WordPress data and compares saved
-            links automatically. You do not need to load the source
-            preview or linking list first.
-        </p>
+            <summary class="cursor-pointer px-5 py-4 text-lg font-semibold text-headingTextColor">
+                Sessions
+                <span class="ml-2 text-xs font-normal text-gray-500">
+                    Import & update agenda
+                </span>
+            </summary>
+
+            <div class="border-t border-gray-100 px-5 pb-5">
+                {{-- Source selection --}}
+                <div class="py-4">
+                    <label
+                        for="wp-sync-feature"
+                        class="block text-sm font-medium text-gray-700 mb-2">
+                        Agenda feature
+                    </label>
+
+                    <select
+                        id="wp-sync-feature"
+                        wire:model="wpPreviewPostType"
+                        class="border border-gray-300 rounded-lg px-3 py-2 w-full">
+                        <option value="">
+                            Select a feature
+                        </option>
+
+                        @foreach ($this->wpPreviewSourceChoices as $choice)
+                            <option value="{{ $choice['post_type'] }}">
+                                {{ $choice['label'] }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    @error('wpPreviewPostType')
+                        <p class="text-sm text-red-600 mt-2">
+                            {{ $message }}
+                        </p>
+                    @enderror
+                </div>
+
+                {{-- Everyday actions --}}
+                <div class="border-t border-gray-100">
+                    <details wire:ignore.self>
+                        <summary class="cursor-pointer py-4 text-sm font-semibold text-headingTextColor">
+                            Update linked sessions
+                        </summary>
+
+                        <div class="pb-4">
+                            @include('livewire.event.data-sync.linked-update-preview')
+                        </div>
+                    </details>
+
+                    <details
+                        wire:ignore.self
+                        class="border-t border-gray-100">
+
+                        <summary class="cursor-pointer py-4 text-sm font-semibold text-headingTextColor">
+                            Create missing sessions
+                        </summary>
+
+                        <div class="pb-4">
+                            @include('livewire.event.data-sync.create-preview')
+                        </div>
+                    </details>
+                </div>
+
+                {{-- Occasional setup --}}
+                <details
+                    wire:ignore.self
+                    class="border-t border-gray-100">
+
+                    <summary class="cursor-pointer py-4 text-sm font-medium text-gray-500">
+                        Setup & maintenance
+                    </summary>
+
+                    <div class="border-l border-gray-200 pl-4">
+                        <details wire:ignore.self>
+                            <summary class="cursor-pointer py-3 text-sm font-medium text-gray-700">
+                                Link existing sessions
+                            </summary>
+
+                            <div class="pb-3">
+                                @include('livewire.event.details.wordpress-agenda-linking')
+                            </div>
+                        </details>
+
+                        <details
+                            wire:ignore.self
+                            class="border-t border-gray-100">
+
+                            <summary class="cursor-pointer py-3 text-sm font-medium text-gray-700">
+                                Source settings
+                            </summary>
+
+                            <div class="pb-3">
+                                @include('livewire.event.details.wordpress-agenda-settings')
+                            </div>
+                        </details>
+
+                        <details
+                            wire:ignore.self
+                            class="border-t border-gray-100">
+
+                            <summary class="cursor-pointer py-3 text-sm font-medium text-gray-700">
+                                Inspect WordPress source
+                            </summary>
+
+                            <div class="pb-3">
+                                @include('livewire.event.details.wordpress-agenda-preview')
+                            </div>
+                        </details>
+                    </div>
+                </details>
+            </div>
+        </details>
     </div>
-
-    @include('livewire.event.data-sync.linked-update-preview')
-    @include('livewire.event.data-sync.create-preview')
-
-    {{-- Initial setup / occasional maintenance --}}
-<details wire:ignore.self class="mt-6 border border-gray-200 rounded-xl p-5">
-    <summary class="cursor-pointer font-semibold">
-        Manage existing-session links — initial setup
-    </summary>
-
-        <p class="mt-3 text-sm text-gray-600">
-            Select an agenda feature above, then load the linking list.
-            Use this only to connect existing app sessions that do not
-            already have a saved WordPress link.
-        </p>
-
-        @include('livewire.event.details.wordpress-agenda-linking')
-    </details>
-
-    <details class="mt-6 border border-gray-200 rounded-xl p-5">
-        <summary class="cursor-pointer font-semibold">
-            Source settings — configuration
-        </summary>
-
-        @include('livewire.event.details.wordpress-agenda-settings')
-    </details>
-
-    <details class="mt-6 border border-gray-200 rounded-xl p-5">
-        <summary class="cursor-pointer font-semibold">
-            Inspect WordPress source — optional
-        </summary>
-
-        <p class="mt-3 text-sm text-gray-600">
-            This is a separate source inspection tool.
-            It is not required before previewing linked updates.
-        </p>
-
-        @include('livewire.event.details.wordpress-agenda-preview')
-
-    </details>
 </div>
