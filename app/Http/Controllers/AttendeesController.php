@@ -407,19 +407,19 @@ class AttendeesController extends Controller
 
 
             if ($request->filled('device_token')) {
-    $attendeeDeviceToken = AttendeeDeviceToken::where('event_id', $eventId)
-        ->where('attendee_id', $attendee->id)
-        ->where('device_token', $request->device_token)
-        ->first();
+                $attendeeDeviceToken = AttendeeDeviceToken::where('event_id', $eventId)
+                    ->where('attendee_id', $attendee->id)
+                    ->where('device_token', $request->device_token)
+                    ->first();
 
-    if (!$attendeeDeviceToken) {
-        AttendeeDeviceToken::create([
-            'event_id' => $eventId,
-            'attendee_id' => $attendee->id,
-            'device_token' => $request->device_token,
-        ]);
-    }
-}
+                if (!$attendeeDeviceToken) {
+                    AttendeeDeviceToken::create([
+                        'event_id' => $eventId,
+                        'attendee_id' => $attendee->id,
+                        'device_token' => $request->device_token,
+                    ]);
+                }
+            }
 
             $tokenResult = $attendee->createToken('api token of ' . $attendee->id);
 
@@ -441,8 +441,26 @@ class AttendeesController extends Controller
                 'attendeeId' => $attendee->id,
                 'firebaseUid' => $attendee->firebase_uid ?? '',
             ], "Logged in successfully", 200);
-        } catch (\Exception $e) {
-            return $this->error($e, "An error occurred while logging in", 500);
+        }
+        // catch (\Exception $e) {
+        //     return $this->error($e, "An error occurred while logging in", 500);
+        // }
+
+        catch (\Exception $e) {
+            Log::error('Attendee login failed', [
+                'event_id' => $eventId,
+                'attendee_id' => isset($attendee) ? $attendee->id : null,
+                'exception_class' => get_class($e),
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return $this->error(
+                $e,
+                "An error occurred while logging in",
+                500
+            );
         }
     }
 
@@ -603,52 +621,52 @@ class AttendeesController extends Controller
 
 
     public function apiAttendeeLogout(
-    Request $request,
-    $apiCode,
-    $eventCategory,
-    $eventId,
-    $attendeeId
-) {
-    $validator = Validator::make($request->all(), [
-        'attendee_id' => 'required',
-        'device_token' => 'nullable|string',
-    ]);
+        Request $request,
+        $apiCode,
+        $eventCategory,
+        $eventId,
+        $attendeeId
+    ) {
+        $validator = Validator::make($request->all(), [
+            'attendee_id' => 'required',
+            'device_token' => 'nullable|string',
+        ]);
 
-    if ($validator->fails()) {
-        return $this->errorValidation($validator->errors());
-    }
-
-    try {
-        $user = $request->user();
-
-        if (!$user || !$user->currentAccessToken()) {
-            return $this->error(null, "Unauthenticated", 401);
+        if ($validator->fails()) {
+            return $this->errorValidation($validator->errors());
         }
 
-        // Remove a notification token only when one was supplied.
-        if ($request->filled('device_token')) {
-            $attendeeDevice = AttendeeDeviceToken::where('event_id', $eventId)
-                ->where('attendee_id', $user->id)
-                ->where('device_token', $request->device_token)
-                ->first();
+        try {
+            $user = $request->user();
 
-            if ($attendeeDevice) {
-                $attendeeDevice->delete();
+            if (!$user || !$user->currentAccessToken()) {
+                return $this->error(null, "Unauthenticated", 401);
             }
+
+            // Remove a notification token only when one was supplied.
+            if ($request->filled('device_token')) {
+                $attendeeDevice = AttendeeDeviceToken::where('event_id', $eventId)
+                    ->where('attendee_id', $user->id)
+                    ->where('device_token', $request->device_token)
+                    ->first();
+
+                if ($attendeeDevice) {
+                    $attendeeDevice->delete();
+                }
+            }
+
+            // Revoke this session even when no notification token exists.
+            $user->currentAccessToken()->delete();
+
+            return $this->success(null, "Logged out successfully", 200);
+        } catch (\Exception $e) {
+            return $this->error(
+                $e,
+                "An error occurred while logging out",
+                500
+            );
         }
-
-        // Revoke this session even when no notification token exists.
-        $user->currentAccessToken()->delete();
-
-        return $this->success(null, "Logged out successfully", 200);
-    } catch (\Exception $e) {
-        return $this->error(
-            $e,
-            "An error occurred while logging out",
-            500
-        );
     }
-}
 
     // public function apiAttendeeProfile($apiCode, $eventCategory, $eventId, $attendeeId)
     public function apiAttendeeProfile(Request $request, $api_code, $eventCategory, $eventId, $attendeeId)
