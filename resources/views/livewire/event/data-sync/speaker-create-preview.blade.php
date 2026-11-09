@@ -33,6 +33,16 @@
 
 
     @if ($wpSpeakerCreateLoaded)
+
+        @php
+            $wpSpeakerCreateSelectedCount = count(
+                array_filter($wpSpeakerCreateSelections, function ($checked) {
+                    return $checked === true;
+                }),
+            );
+        @endphp
+
+
         <p class="mt-3 text-sm">
             {{ count($wpSpeakerCreateRows) }} unlinked eligible records;
             {{ $wpSpeakerCreateLinkedCount }} already linked;
@@ -61,12 +71,7 @@
                 </button>
 
                 <span class="text-sm text-gray-600">
-                    {{ count(
-                        array_filter($wpSpeakerCreateSelections, function ($value) {
-                            return $value === true;
-                        }),
-                    ) }}
-                    selected
+                    {{ $wpSpeakerCreateSelectedCount }} selected
                 </span>
             </div>
         @endif
@@ -90,8 +95,8 @@
                                 @if ($row['can_create'])
                                     <label>
                                         <input type="checkbox"
-                                            wire:model="wpSpeakerCreateSelections.{{ $row['wp_id'] }}">
-
+                                            wire:model="wpSpeakerCreateSelections.{{ $row['wp_id'] }}"
+                                            wire:loading.attr="disabled">
                                         Select
                                     </label>
                                 @else
@@ -195,32 +200,45 @@
         </div>
 
 
-        @if ($wpSpeakerCreateToken)
-            <div class="border-t mt-4 pt-4">
-                <label class="block text-sm">
-                    <input type="checkbox" wire:model="wpSpeakerCreateConfirmed" wire:loading.attr="disabled"
-                        wire:target="createSelectedWordPressSpeakers">
+    @if ($wpSpeakerCreateToken)
+    <div class="border-t mt-4 pt-4">
+        <label class="block text-sm">
+            <input
+                type="checkbox"
+                wire:model="wpSpeakerCreateConfirmed"
+                wire:loading.attr="disabled">
 
-                    I reviewed the selected speakers and approve creating their
-                    active profiles and WordPress links, including available,
-                    allowed profile photos.
-                </label>
+            I reviewed the selected speakers and approve creating
+            {{ $wpSpeakerCreateSelectedCount }} active speaker profile(s)
+            and their WordPress links, including available,
+            allowed profile photos.
+        </label>
 
-                <p class="text-sm text-gray-600 mt-2">
-                    New speakers will be appended after existing speakers.
-                    Existing profiles and session assignments will not be changed.
-                </p>
+        <p class="text-sm text-gray-600 mt-2">
+            New speakers will be appended after existing speakers.
+            Existing profiles and session assignments will not be changed.
+        </p>
 
-                <button type="button" wire:click="createSelectedWordPressSpeakers" wire:loading.attr="disabled"
-                    @if (!$wpSpeakerCreateConfirmed) disabled @endif class="border rounded p-3 mt-3">
-                    Create selected missing speakers
-                </button>
+        <button
+            type="button"
+            wire:click="createSelectedWordPressSpeakers"
+            wire:loading.attr="disabled"
+            @if (
+                !$wpSpeakerCreateConfirmed
+                || $wpSpeakerCreateSelectedCount < 1
+            ) disabled @endif
+            class="border rounded p-3 mt-3 disabled:opacity-50">
+            Create {{ $wpSpeakerCreateSelectedCount }} selected speaker(s)
+        </button>
 
-                <p wire:loading wire:target="createSelectedWordPressSpeakers" class="text-sm mt-2">
-                    Rechecking WordPress and creating selected speakers...
-                </p>
-            </div>
-        @endif
+        <p
+            wire:loading
+            wire:target="createSelectedWordPressSpeakers"
+            class="text-sm mt-2">
+            Rechecking WordPress and creating selected speakers...
+        </p>
+    </div>
+@endif
 
     @endif
 </div>

@@ -142,7 +142,7 @@ trait HasWordPressAgendaSettings
             }
         }
 
-        $event->wordpress_source_url = $this->wpSourceUrl;
+        // $event->wordpress_source_url = $this->wpSourceUrl;
         $event->wordpress_agenda_config = [
             'version' => 1,
             'year' => (string) $this->wpAgendaYear,

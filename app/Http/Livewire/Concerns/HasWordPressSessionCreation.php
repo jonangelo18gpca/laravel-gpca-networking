@@ -17,6 +17,15 @@ trait HasWordPressSessionCreation
     public $wpCreateToken = '';
     public $wpCreateConfirmed = false;
 
+    public $wpCreateSelections = [];
+
+    public function updatedWpCreateSelections()
+    {
+        $this->wpCreateConfirmed = false;
+        $this->wpCreateSuccess = '';
+    }
+
+
     protected function wpCreateCacheKey($token)
     {
         $owner = hash(
@@ -37,6 +46,9 @@ trait HasWordPressSessionCreation
 
     public function clearWordPressCreatePreview()
     {
+
+        $this->wpCreateSelections = [];
+
         if ($this->wpCreateToken) {
             Cache::forget(
                 $this->wpCreateCacheKey($this->wpCreateToken)
@@ -97,6 +109,16 @@ trait HasWordPressSessionCreation
                 ],
                 now()->addMinutes(15)
             );
+            $this->wpCreateSelections = [];
+
+            foreach ($result['rows'] as $row) {
+                if (
+                    $row['status'] === 'Ready to create'
+                    && empty($row['issues'])
+                ) {
+                    $this->wpCreateSelections[(int) $row['wordpress_id']] = false;
+                }
+            }
 
             $this->wpCreatePreview = $result;
             $this->wpCreateToken = $token;
@@ -108,15 +130,94 @@ trait HasWordPressSessionCreation
         }
     }
 
+
+    public function selectAllWordPressSessionCreation($checked = true)
+    {
+        $this->assertDataSyncAdmin();
+
+        $this->wpCreateConfirmed = false;
+        $this->wpCreateSuccess = '';
+        $this->wpCreatePreviewError = '';
+
+        try {
+            if (!is_bool($checked)) {
+                throw new RuntimeException('Invalid selection value.');
+            }
+
+            $token = (string) $this->wpCreateToken;
+
+            if (!preg_match('/^[A-Za-z0-9]{48}$/', $token)) {
+                throw new RuntimeException(
+                    'Generate a new creation preview first.'
+                );
+            }
+
+            $plan = Cache::get($this->wpCreateCacheKey($token));
+
+            $event = Event::whereKey($this->eventData['eventId'])
+                ->where('category', $this->eventData['eventCategory'])
+                ->firstOrFail();
+
+            if (
+                !is_array($plan)
+                || !isset(
+                    $plan['event_id'],
+                    $plan['category'],
+                    $plan['post_type'],
+                    $plan['config_hash'],
+                    $plan['preview']['rows']
+                )
+                || !is_array($plan['preview']['rows'])
+                || $plan['event_id'] !== (int) $event->id
+                || $plan['category'] !== (string) $event->category
+                || $plan['post_type'] !== (string) $this->wpPreviewPostType
+            ) {
+                throw new RuntimeException(
+                    'Preview expired or feature changed. Preview again.'
+                );
+            }
+
+            if (
+                $plan['config_hash'] !== $this->wpCreateConfigHash($event)
+            ) {
+                throw new RuntimeException(
+                    'Saved settings changed. Preview again.'
+                );
+            }
+
+            $selections = [];
+
+            // Use cached server-side rows, not browser preview values.
+            foreach ($plan['preview']['rows'] as $row) {
+                if (
+                    $row['status'] === 'Ready to create'
+                    && empty($row['issues'])
+                ) {
+                    $selections[(int) $row['wordpress_id']] = $checked;
+                }
+            }
+
+            $this->wpCreateSelections = $selections;
+        } catch (\Throwable $e) {
+            report($e);
+
+            $this->wpCreatePreviewError = mb_substr(
+                $e->getMessage(),
+                0,
+                600
+            );
+        }
+    }
+
     public function createReviewedWordPressSessions()
     {
 
-    $this->assertDataSyncAdmin();
+        $this->assertDataSyncAdmin();
         $this->wpCreatePreviewError = '';
         $this->wpCreateSuccess = '';
 
         try {
-            if (!$this->wpCreateConfirmed) {
+            if ($this->wpCreateConfirmed !== true) {
                 throw new RuntimeException(
                     'Review the records and tick the confirmation checkbox.'
                 );
@@ -135,8 +236,19 @@ trait HasWordPressSessionCreation
             $category = (string) $this->eventData['eventCategory'];
             $type = (string) $this->wpPreviewPostType;
 
+            if (!is_array($this->wpCreateSelections)) {
+                throw new RuntimeException('Invalid session selections.');
+            }
+
+            $selections = $this->wpCreateSelections;
+
+
             $count = DB::transaction(function () use (
-                $key, $eventId, $category, $type
+                $key,
+                $eventId,
+                $category,
+                $type,
+                $selections
             ) {
                 $event = Event::whereKey($eventId)
                     ->where('category', $category)
@@ -174,6 +286,43 @@ trait HasWordPressSessionCreation
                     );
                 }
 
+                $eligible = [];
+
+                foreach ($plan['preview']['rows'] as $plannedRow) {
+                    if (
+                        $plannedRow['status'] === 'Ready to create'
+                        && empty($plannedRow['issues'])
+                    ) {
+                        $eligible[(int) $plannedRow['wordpress_id']] = true;
+                    }
+                }
+
+                $selectedIds = [];
+
+                foreach ($selections as $wpId => $checked) {
+                    if ($checked === false) {
+                        continue;
+                    }
+
+                    if (
+                        $checked !== true
+                        || !ctype_digit((string) $wpId)
+                        || !isset($eligible[(int) $wpId])
+                    ) {
+                        throw new RuntimeException(
+                            'A selected session is not eligible in this preview.'
+                        );
+                    }
+
+                    $selectedIds[(int) $wpId] = true;
+                }
+
+                if (!$selectedIds) {
+                    throw new RuntimeException(
+                        'Select at least one session to create.'
+                    );
+                }
+
                 DB::table('sessions')
                     ->where('event_id', $eventId)
                     ->orderBy('id')
@@ -204,6 +353,10 @@ trait HasWordPressSessionCreation
                 $now = now();
 
                 foreach ($plan['preview']['rows'] as $row) {
+                    if (!isset($selectedIds[(int) $row['wordpress_id']])) {
+                        continue;
+                    }
+
                     if (
                         $row['status'] !== 'Ready to create' ||
                         $row['issues']
@@ -252,8 +405,8 @@ trait HasWordPressSessionCreation
 
                     if (
                         DB::table('wordpress_agenda_links')
-                            ->where('identity_hash', $identity)
-                            ->exists()
+                        ->where('identity_hash', $identity)
+                        ->exists()
                     ) {
                         throw new RuntimeException(
                             'A source record was already linked. Preview again.'
@@ -286,7 +439,7 @@ trait HasWordPressSessionCreation
                         'source_url' => $base,
                         'post_type' => $type,
                         'wordpress_post_id' =>
-                            (int) $row['wordpress_id'],
+                        (int) $row['wordpress_id'],
                         'identity_hash' => $identity,
                         'created_at' => $now,
                         'updated_at' => $now,
@@ -303,6 +456,7 @@ trait HasWordPressSessionCreation
             $this->wpCreateToken = '';
             $this->wpCreateConfirmed = false;
             $this->wpCreatePreview = [];
+            $this->wpCreateSelections = [];
 
             $this->wpCreateSuccess =
                 'Created ' . $count .

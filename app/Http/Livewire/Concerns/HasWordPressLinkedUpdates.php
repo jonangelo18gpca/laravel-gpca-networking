@@ -17,6 +17,15 @@ trait HasWordPressLinkedUpdates
     public $wpUpdateToken = '';
     public $wpUpdateConfirmed = false;
 
+    public $wpUpdateSelections = [];
+
+    public function updatedWpUpdateSelections()
+    {
+        $this->wpUpdateConfirmed = false;
+        $this->wpUpdateSuccess = '';
+    }
+
+
     protected function wpUpdateCacheKey($token)
     {
         $owner = hash(
@@ -37,6 +46,9 @@ trait HasWordPressLinkedUpdates
 
     public function previewLinkedWordPressUpdates()
     {
+        $this->assertDataSyncAdmin();
+        $this->wpUpdateSelections = [];
+
         if ($this->wpUpdateToken) {
             Cache::forget(
                 $this->wpUpdateCacheKey($this->wpUpdateToken)
@@ -82,7 +94,7 @@ trait HasWordPressLinkedUpdates
 
             $token = Str::random(48);
 
-            Cache::put(
+            $stored = Cache::put(
                 $this->wpUpdateCacheKey($token),
                 [
                     'event_id' => (int) $event->id,
@@ -94,7 +106,34 @@ trait HasWordPressLinkedUpdates
                 now()->addMinutes(15)
             );
 
-            $this->wpUpdatePreview = $result;
+            if ($stored === false) {
+                throw new RuntimeException(
+                    'Could not store the update preview. Please try again.'
+                );
+            }
+
+
+            // Keep the complete result in cache for the existing freshness check.
+            // Filter only the browser's displayed rows.
+            $display = $result;
+
+            $display['rows'] = array_values(array_filter(
+                $result['rows'],
+                function ($row) {
+                    return $row['status'] === 'Would update'
+                        && !empty($row['changes']);
+                }
+            ));
+
+            $this->wpUpdateSelections = [];
+
+            foreach ($display['rows'] as $row) {
+                $selectionKey = 'session_' . (int) $row['session_id'];
+
+                $this->wpUpdateSelections[$selectionKey] = false;
+            }
+
+            $this->wpUpdatePreview = $display;
             $this->wpUpdateToken = $token;
         } catch (\Throwable $e) {
             report($e);
@@ -106,6 +145,9 @@ trait HasWordPressLinkedUpdates
 
     public function updatedWpPreviewPostType()
     {
+
+
+        $this->wpUpdateSelections = [];
 
         $this->clearWordPressCreatePreview();
 
@@ -124,11 +166,15 @@ trait HasWordPressLinkedUpdates
 
     public function applyLinkedWordPressUpdates()
     {
+
+        $this->assertDataSyncAdmin();
+
+
         $this->wpUpdatePreviewError = '';
         $this->wpUpdateSuccess = '';
 
         try {
-            if (!$this->wpUpdateConfirmed) {
+            if ($this->wpUpdateConfirmed !== true) {
                 throw new RuntimeException(
                     'Review the changes and tick the confirmation checkbox.'
                 );
@@ -147,11 +193,19 @@ trait HasWordPressLinkedUpdates
             $category = (string) $this->eventData['eventCategory'];
             $type = (string) $this->wpPreviewPostType;
 
+            if (!is_array($this->wpUpdateSelections)) {
+                throw new RuntimeException('Invalid session selections.');
+            }
+
+            $selections = $this->wpUpdateSelections;
+
+
             $updated = DB::transaction(function () use (
                 $key,
                 $eventId,
                 $category,
-                $type
+                $type,
+                $selections
             ) {
                 $event = Event::whereKey($eventId)
                     ->where('category', $category)
@@ -161,10 +215,20 @@ trait HasWordPressLinkedUpdates
                 $plan = Cache::get($key);
 
                 if (
-                    !$plan ||
-                    $plan['event_id'] !== $eventId ||
-                    $plan['event_category'] !== $category ||
-                    $plan['post_type'] !== $type
+                    !is_array($plan)
+                    || !isset(
+                        $plan['event_id'],
+                        $plan['event_category'],
+                        $plan['post_type'],
+                        $plan['config_hash'],
+                        $plan['preview']['rows'],
+                        $plan['preview']['blocked'],
+                        $plan['preview']['update']
+                    )
+                    || !is_array($plan['preview']['rows'])
+                    || $plan['event_id'] !== $eventId
+                    || $plan['event_category'] !== $category
+                    || $plan['post_type'] !== $type
                 ) {
                     throw new RuntimeException(
                         'Preview expired or the selected feature changed. Preview again.'
@@ -191,6 +255,48 @@ trait HasWordPressLinkedUpdates
                         'There are no changes to apply.'
                     );
                 }
+
+
+                $eligible = [];
+
+                foreach ($plan['preview']['rows'] as $plannedRow) {
+                    if (
+                        $plannedRow['status'] === 'Would update'
+                        && !empty($plannedRow['changes'])
+                    ) {
+                        $selectionKey =
+                            'session_' . (int) $plannedRow['session_id'];
+
+                        $eligible[$selectionKey] = true;
+                    }
+                }
+
+                $selected = [];
+
+                foreach ($selections as $selectionKey => $checked) {
+                    if ($checked === false) {
+                        continue;
+                    }
+
+                    if (
+                        $checked !== true
+                        || !isset($eligible[$selectionKey])
+                    ) {
+                        throw new RuntimeException(
+                            'A selected session is not eligible in this preview.'
+                        );
+                    }
+
+                    $selected[$selectionKey] = true;
+                }
+
+                if (!$selected) {
+                    throw new RuntimeException(
+                        'Select at least one session to update.'
+                    );
+                }
+
+
 
                 DB::table('sessions')
                     ->where('event_id', $eventId)
@@ -225,6 +331,12 @@ trait HasWordPressLinkedUpdates
 
                 foreach ($plan['preview']['rows'] as $row) {
                     if ($row['status'] !== 'Would update') {
+                        continue;
+                    }
+
+                    $selectionKey = 'session_' . (int) $row['session_id'];
+
+                    if (!isset($selected[$selectionKey])) {
                         continue;
                     }
 
@@ -272,18 +384,101 @@ trait HasWordPressLinkedUpdates
             $this->wpUpdateToken = '';
             $this->wpUpdateConfirmed = false;
             $this->wpUpdatePreview = [];
+            $this->wpUpdateSelections = [];
 
             $this->wpUpdateSuccess =
-                'Updated ' . $updated .
-                ' linked session(s). Created 0 sessions. ' .
-                'Unlinked records and descriptions were left untouched. ' .
-                'Run the preview again to verify.';
+                'Updated ' . $updated . ' selected linked session(s). '
+                . 'Created 0 sessions. '
+                . 'Unchecked sessions, unlinked records and descriptions '
+                . 'were left untouched. '
+                . 'Run the preview again to verify.';
         } catch (\Throwable $e) {
             report($e);
 
             $this->wpUpdateConfirmed = false;
             $this->wpUpdatePreviewError =
                 mb_substr($e->getMessage(), 0, 600);
+        }
+    }
+
+
+    public function selectAllWordPressSessionUpdates($checked = true)
+    {
+        $this->assertDataSyncAdmin();
+
+        $this->wpUpdateConfirmed = false;
+        $this->wpUpdateSuccess = '';
+        $this->wpUpdatePreviewError = '';
+
+        try {
+            if (!is_bool($checked)) {
+                throw new RuntimeException('Invalid selection value.');
+            }
+
+            $token = (string) $this->wpUpdateToken;
+
+            if (!preg_match('/^[A-Za-z0-9]{48}$/', $token)) {
+                throw new RuntimeException(
+                    'Generate a new update preview first.'
+                );
+            }
+
+            $plan = Cache::get($this->wpUpdateCacheKey($token));
+
+            $event = Event::whereKey($this->eventData['eventId'])
+                ->where('category', $this->eventData['eventCategory'])
+                ->firstOrFail();
+
+            if (
+                !is_array($plan)
+                || !isset(
+                    $plan['event_id'],
+                    $plan['event_category'],
+                    $plan['post_type'],
+                    $plan['config_hash'],
+                    $plan['preview']['rows']
+                )
+                || !is_array($plan['preview']['rows'])
+                || $plan['event_id'] !== (int) $event->id
+                || $plan['event_category'] !== (string) $event->category
+                || $plan['post_type'] !== (string) $this->wpPreviewPostType
+            ) {
+                throw new RuntimeException(
+                    'Preview expired or feature changed. Preview again.'
+                );
+            }
+
+            if (
+                $plan['config_hash'] !== $this->wpUpdateConfigHash($event)
+            ) {
+                throw new RuntimeException(
+                    'Saved settings changed. Preview again.'
+                );
+            }
+
+            $selections = [];
+
+            foreach ($plan['preview']['rows'] as $row) {
+                if (
+                    $row['status'] === 'Would update'
+                    && !empty($row['changes'])
+                ) {
+                    $selectionKey =
+                        'session_' . (int) $row['session_id'];
+
+                    $selections[$selectionKey] = $checked;
+                }
+            }
+
+            $this->wpUpdateSelections = $selections;
+        } catch (\Throwable $e) {
+            report($e);
+
+            $this->wpUpdatePreviewError = mb_substr(
+                $e->getMessage(),
+                0,
+                600
+            );
         }
     }
 }

@@ -22,6 +22,7 @@ trait HasWordPressSpeakerUpdates
     public $wpSpeakerUpdateToken = '';
     public $wpSpeakerUpdateSelections = [];
     public $wpSpeakerUpdateConfirmed = false;
+    public $wpSpeakerUpdateNotices = [];
 
     protected function wpSpeakerUpdateCacheKey($token)
     {
@@ -35,6 +36,8 @@ trait HasWordPressSpeakerUpdates
 
     protected function resetWordPressSpeakerUpdates()
     {
+        $this->wpSpeakerUpdateNotices = [];
+
         $token = (string) $this->wpSpeakerUpdateToken;
 
         if (preg_match('/^[A-Za-z0-9]{48}$/', $token)) {
@@ -339,7 +342,8 @@ trait HasWordPressSpeakerUpdates
                         $proposed['profile_photo'] = $sourcePhoto;
 
                         // Photo changes start selected, including photo-only updates.
-                        $this->wpSpeakerUpdateSelections[$wpId]['profile_photo'] = true;
+                        // All proposed changes start unchecked.
+                        $this->wpSpeakerUpdateSelections[$wpId]['profile_photo'] = false;
                     }
                 }
 
@@ -352,15 +356,45 @@ trait HasWordPressSpeakerUpdates
                 ];
 
 
-                $displayRows[] = [
-                    'wp_id' => $wpId,
-                    'speaker_id' => (int) $speaker->id,
-                    'source_name' => $sourceRow['name'],
-                    'app_name' => $this->wpSpeakerLinkName($speaker),
-                    'eligibility' => $sourceRow['eligibility'],
-                    'change_count' => count($proposed),
-                    'fields' => $fields,
-                ];
+                $changedFields = [];
+                $notices = [];
+
+                foreach ($fields as $field) {
+                    if ($field['status'] === 'Proposed change') {
+                        $changedFields[] = $field;
+                        continue;
+                    }
+
+                    // Keep preservation, eligibility and review messages separately.
+                    if (!in_array($field['status'], [
+                        'No text change',
+                        'No name change',
+                        'No URL change',
+                    ], true)) {
+                        $notices[] = $field['label'] . ': ' . $field['status'];
+                    }
+                }
+
+                if ($notices) {
+                    $this->wpSpeakerUpdateNotices[] = [
+                        'wp_id' => $wpId,
+                        'speaker_id' => (int) $speaker->id,
+                        'name' => $sourceRow['name'],
+                        'messages' => array_values(array_unique($notices)),
+                    ];
+                }
+
+                if ($proposed) {
+                    $displayRows[] = [
+                        'wp_id' => $wpId,
+                        'speaker_id' => (int) $speaker->id,
+                        'source_name' => $sourceRow['name'],
+                        'app_name' => $this->wpSpeakerLinkName($speaker),
+                        'eligibility' => $sourceRow['eligibility'],
+                        'change_count' => count($proposed),
+                        'fields' => $changedFields,
+                    ];
+                }
 
                 if ($proposed) {
                     $planRows[$wpId] = [
@@ -402,6 +436,108 @@ trait HasWordPressSpeakerUpdates
         } catch (Throwable $exception) {
             report($exception);
             $this->resetWordPressSpeakerUpdates();
+
+            $this->wpSpeakerUpdateError = mb_substr(
+                $exception->getMessage(),
+                0,
+                600
+            );
+        }
+    }
+
+
+    public function selectWordPressSpeakerUpdateFields(
+        $wpId,
+        $checked = true
+    ) {
+        $this->assertDataSyncAdmin();
+
+        $this->wpSpeakerUpdateConfirmed = false;
+        $this->wpSpeakerUpdateError = '';
+        $this->wpSpeakerUpdateSuccess = '';
+
+        try {
+            if (
+                !is_scalar($wpId)
+                || !ctype_digit((string) $wpId)
+                || (int) $wpId < 1
+                || !is_bool($checked)
+            ) {
+                throw new RuntimeException(
+                    'Invalid speaker selection.'
+                );
+            }
+
+            $wpId = (int) $wpId;
+            $token = (string) $this->wpSpeakerUpdateToken;
+
+            if (!preg_match('/^[A-Za-z0-9]{48}$/', $token)) {
+                throw new RuntimeException(
+                    'Load a fresh linked-speaker update preview first.'
+                );
+            }
+
+            $plan = Cache::get(
+                $this->wpSpeakerUpdateCacheKey($token)
+            );
+
+            if (
+                !is_array($plan)
+                || !isset(
+                    $plan['context'],
+                    $plan['settings_hash'],
+                    $plan['rows']
+                )
+                || !is_array($plan['rows'])
+            ) {
+                throw new RuntimeException(
+                    'The update preview expired. Load it again.'
+                );
+            }
+
+            if (
+                $plan['context'] !== $this->wpSpeakerLinkContext()
+                || $plan['settings_hash']
+                !== $this->wpSpeakerUpdateSettingsSnapshot()
+            ) {
+                throw new RuntimeException(
+                    'The source settings changed. Reload the update preview.'
+                );
+            }
+
+            if (
+                !isset($plan['rows'][$wpId]['values'])
+                || !is_array($plan['rows'][$wpId]['values'])
+            ) {
+                throw new RuntimeException(
+                    'This speaker has no approved proposed changes.'
+                );
+            }
+
+            $allowed = [
+                'job_title',
+                'company_name',
+                'biography_html_text',
+                'name',
+                'profile_photo',
+            ];
+
+            $selections = [];
+
+            foreach ($plan['rows'][$wpId]['values'] as $field => $value) {
+                if (!in_array($field, $allowed, true)) {
+                    throw new RuntimeException(
+                        'The update plan contains an unexpected field.'
+                    );
+                }
+
+                $selections[$field] = $checked;
+            }
+
+            // Change only this speaker's selections.
+            $this->wpSpeakerUpdateSelections[$wpId] = $selections;
+        } catch (Throwable $exception) {
+            report($exception);
 
             $this->wpSpeakerUpdateError = mb_substr(
                 $exception->getMessage(),

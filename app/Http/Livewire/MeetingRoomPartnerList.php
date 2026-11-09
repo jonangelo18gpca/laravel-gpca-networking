@@ -538,41 +538,132 @@ if (
         ]);
     }
 
-    public function deleteMeetingRoomPartner()
-    {
-        $meetingRoomPartner = MeetingRoomPartners::where('id', $this->finalListOfMeetingRoomPartners[$this->activeDeleteIndex]['id'])->first();
+    // public function deleteMeetingRoomPartner()
+    // {
+    //     $meetingRoomPartner = MeetingRoomPartners::where('id', $this->finalListOfMeetingRoomPartners[$this->activeDeleteIndex]['id'])->first();
 
-        if ($meetingRoomPartner) {
-            if ($meetingRoomPartner->logo_media_id) {
-                mediaUsageUpdate(
-                    MediaUsageUpdateTypes::REMOVED_ONLY->value,
+    //     if ($meetingRoomPartner) {
+    //         if ($meetingRoomPartner->logo_media_id) {
+    //             mediaUsageUpdate(
+    //                 MediaUsageUpdateTypes::REMOVED_ONLY->value,
+    //                 $meetingRoomPartner->logo_media_id,
+    //                 MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value,
+    //                 $meetingRoomPartner->id,
+    //                 getMediaUsageId($meetingRoomPartner->logo_media_id, MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value, $meetingRoomPartner->id),
+    //             );
+    //         }
+
+    //         if ($meetingRoomPartner->banner_media_id) {
+    //             mediaUsageUpdate(
+    //                 MediaUsageUpdateTypes::REMOVED_ONLY->value,
+    //                 $meetingRoomPartner->banner_media_id,
+    //                 MediaEntityTypes::MEETING_ROOM_PARTNER_BANNER->value,
+    //                 $meetingRoomPartner->id,
+    //                 getMediaUsageId($meetingRoomPartner->banner_media_id, MediaEntityTypes::MEETING_ROOM_PARTNER_BANNER->value, $meetingRoomPartner->id),
+    //             );
+    //         }
+
+    //         $meetingRoomPartner->delete();
+
+    //         unset($this->finalListOfMeetingRoomPartners[$this->activeDeleteIndex]);
+    //         $this->finalListOfMeetingRoomPartners = array_values($this->finalListOfMeetingRoomPartners);
+    //     }
+
+    //     $this->dispatchBrowserEvent('swal:success', [
+    //         'type' => 'success',
+    //         'message' => 'Meeting Room Partner deleted successfully!',
+    //         'text' => ''
+    //     ]);
+    // }
+
+
+    public function deleteMeetingRoomPartner()
+{
+    abort_unless(
+        session('userType') === 'gpcaAdmin',
+        403,
+        'Only GPCA administrators can delete meeting room partners.'
+    );
+
+    $index = $this->activeDeleteIndex;
+
+    abort_unless(
+        is_scalar($index)
+            && ctype_digit((string) $index)
+            && isset(
+                $this->finalListOfMeetingRoomPartners[(int) $index]['id']
+            ),
+        422,
+        'The selected partner is no longer available. Refresh and try again.'
+    );
+
+    $partnerId = (int) $this->finalListOfMeetingRoomPartners[
+        (int) $index
+    ]['id'];
+
+    DB::transaction(function () use ($partnerId) {
+        // Coordinate with the WordPress linking/import/update workflows.
+        $event = Events::whereKey($this->event->id)
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        $meetingRoomPartner = MeetingRoomPartners::where(
+            'event_id',
+            $event->id
+        )
+            ->whereKey($partnerId)
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        if ($meetingRoomPartner->logo_media_id) {
+            mediaUsageUpdate(
+                MediaUsageUpdateTypes::REMOVED_ONLY->value,
+                $meetingRoomPartner->logo_media_id,
+                MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value,
+                $meetingRoomPartner->id,
+                getMediaUsageId(
                     $meetingRoomPartner->logo_media_id,
                     MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value,
-                    $meetingRoomPartner->id,
-                    getMediaUsageId($meetingRoomPartner->logo_media_id, MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value, $meetingRoomPartner->id),
-                );
-            }
-
-            if ($meetingRoomPartner->banner_media_id) {
-                mediaUsageUpdate(
-                    MediaUsageUpdateTypes::REMOVED_ONLY->value,
-                    $meetingRoomPartner->banner_media_id,
-                    MediaEntityTypes::MEETING_ROOM_PARTNER_BANNER->value,
-                    $meetingRoomPartner->id,
-                    getMediaUsageId($meetingRoomPartner->banner_media_id, MediaEntityTypes::MEETING_ROOM_PARTNER_BANNER->value, $meetingRoomPartner->id),
-                );
-            }
-
-            $meetingRoomPartner->delete();
-
-            unset($this->finalListOfMeetingRoomPartners[$this->activeDeleteIndex]);
-            $this->finalListOfMeetingRoomPartners = array_values($this->finalListOfMeetingRoomPartners);
+                    $meetingRoomPartner->id
+                )
+            );
         }
 
-        $this->dispatchBrowserEvent('swal:success', [
-            'type' => 'success',
-            'message' => 'Meeting Room Partner deleted successfully!',
-            'text' => ''
-        ]);
-    }
+        if ($meetingRoomPartner->banner_media_id) {
+            mediaUsageUpdate(
+                MediaUsageUpdateTypes::REMOVED_ONLY->value,
+                $meetingRoomPartner->banner_media_id,
+                MediaEntityTypes::MEETING_ROOM_PARTNER_BANNER->value,
+                $meetingRoomPartner->id,
+                getMediaUsageId(
+                    $meetingRoomPartner->banner_media_id,
+                    MediaEntityTypes::MEETING_ROOM_PARTNER_BANNER->value,
+                    $meetingRoomPartner->id
+                )
+            );
+        }
+
+        // Remove every WordPress source link for this app partner.
+        DB::table('wordpress_meeting_room_partner_links')
+            ->where('event_id', $event->id)
+            ->where(
+                'meeting_room_partner_id',
+                $meetingRoomPartner->id
+            )
+            ->delete();
+
+        $meetingRoomPartner->delete();
+    });
+
+    $this->activeDeleteIndex = null;
+
+    $this->resetEditMeetingRoomPartnerDateTimeFields();
+    $this->loadMeetingRoomPartners();
+
+    $this->dispatchBrowserEvent('swal:success', [
+        'type' => 'success',
+        'message' => 'Meeting room partner and its WordPress links deleted successfully!',
+        'text' => 'If the source record still exists in WordPress, it can appear in a fresh creation preview.',
+    ]);
+}
 }
