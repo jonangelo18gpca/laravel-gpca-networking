@@ -183,6 +183,62 @@
                     @include('livewire.event.data-sync.meeting-room-partner-linking')
                 </details>
             </div>
+
+        </details>
+        {{-- Exhibitors --}}
+        <details wire:ignore.self class="border border-gray-200 rounded-xl bg-white">
+            <summary class="cursor-pointer px-5 py-4 text-lg font-semibold text-headingTextColor">
+                Exhibitors
+
+                <span class="ml-2 text-xs font-normal text-gray-500">
+                    Import & update WordPress exhibitors
+                </span>
+            </summary>
+
+            <div class="border-t border-gray-100 px-5 pb-5">
+                <details wire:ignore.self>
+                    <summary class="cursor-pointer py-4 text-sm font-medium text-gray-600">
+                        Update linked exhibitors
+                    </summary>
+
+                    <div class="pb-4">
+                        @include('livewire.event.data-sync.exhibitor-updates')
+                    </div>
+                </details>
+
+                <details wire:ignore.self class="border-t border-gray-100">
+                    <summary class="cursor-pointer py-4 text-sm font-medium text-gray-600">
+                        Create missing exhibitors
+                    </summary>
+
+                    <div class="pb-4">
+                        @include('livewire.event.data-sync.exhibitor-creation')
+                    </div>
+                </details>
+
+                <details wire:ignore.self class="border-t border-gray-100">
+                    <summary class="cursor-pointer py-4 text-sm font-medium text-gray-600">
+                        Inspect WordPress exhibitor source
+                    </summary>
+
+                    <div class="pb-4">
+                        @include('livewire.event.data-sync.exhibitor-preview')
+                    </div>
+                </details>
+
+                <details wire:ignore.self class="border-t border-gray-100">
+                    <summary class="cursor-pointer py-4 text-sm font-medium text-gray-600">
+                        Setup — match existing app exhibitors
+                    </summary>
+
+                    <div class="pb-4">
+                        @include('livewire.event.data-sync.exhibitor-linking')
+                    </div>
+                </details>
+            </div>
         </details>
     </div>
+
+
+
 </div>

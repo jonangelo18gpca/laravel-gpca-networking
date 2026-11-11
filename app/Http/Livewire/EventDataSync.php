@@ -18,6 +18,11 @@ use App\Http\Livewire\Concerns\HasWordPressMeetingRoomPartnerPreview;
 use App\Http\Livewire\Concerns\HasWordPressMeetingRoomPartnerLinking;
 use App\Http\Livewire\Concerns\HasWordPressMeetingRoomPartnerCreation;
 use App\Http\Livewire\Concerns\HasWordPressMeetingRoomPartnerUpdates;
+use App\Http\Livewire\Concerns\HasWordPressExhibitorPreview;
+use App\Http\Livewire\Concerns\HasWordPressExhibitorLinking;
+use App\Http\Livewire\Concerns\HasWordPressExhibitorUpdates;
+use App\Http\Livewire\Concerns\HasWordPressExhibitorCreation;
+
 
 use App\Models\Event;
 use Livewire\Component;
@@ -40,6 +45,10 @@ class EventDataSync extends Component
     use HasWordPressMeetingRoomPartnerLinking;
     use HasWordPressMeetingRoomPartnerCreation;
     use HasWordPressMeetingRoomPartnerUpdates;
+    use HasWordPressExhibitorPreview;
+    use HasWordPressExhibitorLinking;
+    use HasWordPressExhibitorUpdates;
+    use HasWordPressExhibitorCreation;
 
     public $eventData = [];
 
