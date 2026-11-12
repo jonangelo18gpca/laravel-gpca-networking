@@ -22,7 +22,7 @@ use App\Http\Livewire\Concerns\HasWordPressExhibitorPreview;
 use App\Http\Livewire\Concerns\HasWordPressExhibitorLinking;
 use App\Http\Livewire\Concerns\HasWordPressExhibitorUpdates;
 use App\Http\Livewire\Concerns\HasWordPressExhibitorCreation;
-
+use App\Http\Livewire\Concerns\HasWordPressAgendaSpeakerSync;
 
 use App\Models\Event;
 use Livewire\Component;
@@ -49,6 +49,8 @@ class EventDataSync extends Component
     use HasWordPressExhibitorLinking;
     use HasWordPressExhibitorUpdates;
     use HasWordPressExhibitorCreation;
+    use HasWordPressAgendaSpeakerSync;
+    
 
     public $eventData = [];
 

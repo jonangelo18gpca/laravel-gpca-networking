@@ -16,6 +16,11 @@ class MeetingRoomPartnerList extends Component
 {
     public $event;
     public $finalListOfMeetingRoomPartners = array();
+    public $partnerAlphabeticalPreview = [];
+    public $partnerAlphabeticalFingerprint = '';
+    public $partnerAlphabeticalConfirmed = false;
+    public $showPartnerAlphabeticalPreview = false;
+
 
     // ADD MRP
     public $name, $website, $location;
@@ -222,6 +227,187 @@ class MeetingRoomPartnerList extends Component
     }
 
 
+    private function partnerAlphabeticalNameKey($name): string
+{
+    return mb_strtolower(trim((string) $name), 'UTF-8');
+}
+
+private function partnerAlphabeticalOrder($partners)
+{
+    return $partners->sort(function ($left, $right) {
+        $leftName = $this->partnerAlphabeticalNameKey($left->name);
+        $rightName = $this->partnerAlphabeticalNameKey($right->name);
+
+        // Empty company names go last.
+        if (($leftName === '') !== ($rightName === '')) {
+            return $leftName === '' ? 1 : -1;
+        }
+
+        $comparison = strnatcmp($leftName, $rightName);
+
+        if ($comparison !== 0) {
+            return $comparison;
+        }
+
+        // Stable tie-breaker for matching company names.
+        return (int) $left->id <=> (int) $right->id;
+    })->values();
+}
+
+private function partnerAlphabeticalFingerprint($partners): string
+{
+    $snapshot = $partners
+        ->sortBy('id')
+        ->values()
+        ->map(function ($partner) {
+            return [
+                'id' => (int) $partner->id,
+                'event_id' => (int) $partner->event_id,
+                'name' => (string) $partner->name,
+                'datetime_added' => $partner->getRawOriginal(
+                    'datetime_added'
+                ),
+            ];
+        })
+        ->all();
+
+    return hash('sha256', json_encode(
+        [
+            'event_id' => (int) $this->event->id,
+            'partners' => $snapshot,
+        ],
+        JSON_THROW_ON_ERROR
+    ));
+}
+
+public function previewPartnersAlphabetically()
+{
+    abort_unless(
+        session('userType') === 'gpcaAdmin',
+        403,
+        'Only GPCA administrators can reorder meeting room partners.'
+    );
+
+    $this->resetValidation('partnerAlphabeticalSort');
+    $this->cancelPartnerAlphabeticalSort();
+
+    $partners = MeetingRoomPartners::where(
+        'event_id',
+        $this->event->id
+    )
+        ->orderBy('id')
+        ->get();
+
+    if ($partners->isEmpty()) {
+        $this->addError(
+            'partnerAlphabeticalSort',
+            'There are no meeting room partners to sort.'
+        );
+
+        return;
+    }
+
+    $this->partnerAlphabeticalFingerprint =
+        $this->partnerAlphabeticalFingerprint($partners);
+
+    $this->partnerAlphabeticalPreview =
+        $this->partnerAlphabeticalOrder($partners)
+            ->map(function ($partner) {
+                return [
+                    'id' => (int) $partner->id,
+                    'name' => (string) $partner->name,
+                    'is_active' => (bool) $partner->is_active,
+                ];
+            })
+            ->all();
+
+    $this->showPartnerAlphabeticalPreview = true;
+}
+
+public function cancelPartnerAlphabeticalSort()
+{
+    $this->partnerAlphabeticalPreview = [];
+    $this->partnerAlphabeticalFingerprint = '';
+    $this->partnerAlphabeticalConfirmed = false;
+    $this->showPartnerAlphabeticalPreview = false;
+}
+
+public function applyPartnersAlphabetically()
+{
+    abort_unless(
+        session('userType') === 'gpcaAdmin',
+        403,
+        'Only GPCA administrators can reorder meeting room partners.'
+    );
+
+    $this->resetValidation('partnerAlphabeticalSort');
+
+    if (
+        $this->showPartnerAlphabeticalPreview !== true
+        || $this->partnerAlphabeticalConfirmed !== true
+        || !is_string($this->partnerAlphabeticalFingerprint)
+        || !preg_match(
+            '/^[a-f0-9]{64}$/',
+            $this->partnerAlphabeticalFingerprint
+        )
+    ) {
+        $this->addError(
+            'partnerAlphabeticalSort',
+            'Load the alphabetical preview and confirm before saving.'
+        );
+
+        return;
+    }
+
+    DB::transaction(function () {
+        /*
+         * Follow the event-first locking pattern used by your
+         * partner deletion and WordPress workflows.
+         */
+        $event = Events::whereKey($this->event->id)
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        $partners = MeetingRoomPartners::where(
+            'event_id',
+            $event->id
+        )
+            ->orderBy('datetime_added', 'ASC')
+            ->orderBy('id', 'ASC')
+            ->lockForUpdate()
+            ->get();
+
+        if (
+            $partners->isEmpty()
+            || !hash_equals(
+                $this->partnerAlphabeticalFingerprint,
+                $this->partnerAlphabeticalFingerprint($partners)
+            )
+        ) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'partnerAlphabeticalSort' =>
+                    'The partner names, list or ordering changed. '
+                    . 'Load a fresh alphabetical preview before saving.',
+            ]);
+        }
+
+        // Recompute from database records, not public preview values.
+        $items = $this->partnerAlphabeticalOrder($partners)
+            ->map(function ($partner, $index) {
+                return [
+                    'value' => (int) $partner->id,
+                    'order' => $index + 1,
+                ];
+            })
+            ->all();
+
+        // Reuse your existing event-scoped reorder implementation.
+        $this->reorderMeetingRoomPartners($items);
+    });
+
+    $this->cancelPartnerAlphabeticalSort();
+}
+
 
     public function render()
     {
@@ -343,20 +529,20 @@ class MeetingRoomPartnerList extends Component
 
 
         $lastPartnerDate = MeetingRoomPartners::where(
-    'event_id',
-    $this->event->id
-)->max('datetime_added');
+            'event_id',
+            $this->event->id
+        )->max('datetime_added');
 
-$newPartnerDate = Carbon::now()->setMicrosecond(0);
+        $newPartnerDate = Carbon::now()->setMicrosecond(0);
 
-if (
-    $lastPartnerDate &&
-    $newPartnerDate->lessThanOrEqualTo(Carbon::parse($lastPartnerDate))
-) {
-    $newPartnerDate = Carbon::parse($lastPartnerDate)
-        ->setMicrosecond(0)
-        ->addSecond();
-}
+        if (
+            $lastPartnerDate &&
+            $newPartnerDate->lessThanOrEqualTo(Carbon::parse($lastPartnerDate))
+        ) {
+            $newPartnerDate = Carbon::parse($lastPartnerDate)
+                ->setMicrosecond(0)
+                ->addSecond();
+        }
 
 
 
@@ -392,7 +578,7 @@ if (
         // ]);
 
         $this->loadMeetingRoomPartners();
-        
+
         $this->resetAddMeetingRoomPartnerFields();
 
         $this->dispatchBrowserEvent('swal:success', [
@@ -504,26 +690,26 @@ if (
     // }
 
     public function editMeetingRoomPartnerDateTime()
-{
-    $this->validate([
-        'meetingRoomPartnerDateTime' => 'required|date',
-    ]);
-
-    MeetingRoomPartners::where('event_id', $this->event->id)
-        ->where('id', $this->meetingRoomPartnerId)
-        ->update([
-            'datetime_added' => $this->meetingRoomPartnerDateTime,
+    {
+        $this->validate([
+            'meetingRoomPartnerDateTime' => 'required|date',
         ]);
 
-    $this->loadMeetingRoomPartners();
-    $this->resetEditMeetingRoomPartnerDateTimeFields();
+        MeetingRoomPartners::where('event_id', $this->event->id)
+            ->where('id', $this->meetingRoomPartnerId)
+            ->update([
+                'datetime_added' => $this->meetingRoomPartnerDateTime,
+            ]);
 
-    $this->dispatchBrowserEvent('swal:success', [
-        'type' => 'success',
-        'message' => 'Meeting room partner datetime updated successfully!',
-        'text' => '',
-    ]);
-}
+        $this->loadMeetingRoomPartners();
+        $this->resetEditMeetingRoomPartnerDateTimeFields();
+
+        $this->dispatchBrowserEvent('swal:success', [
+            'type' => 'success',
+            'message' => 'Meeting room partner datetime updated successfully!',
+            'text' => '',
+        ]);
+    }
 
 
     public function deleteMeetingRoomPartnerConfirmation($index)
@@ -578,92 +764,90 @@ if (
 
 
     public function deleteMeetingRoomPartner()
-{
-    abort_unless(
-        session('userType') === 'gpcaAdmin',
-        403,
-        'Only GPCA administrators can delete meeting room partners.'
-    );
+    {
+        abort_unless(
+            session('userType') === 'gpcaAdmin',
+            403,
+            'Only GPCA administrators can delete meeting room partners.'
+        );
 
-    $index = $this->activeDeleteIndex;
+        $index = $this->activeDeleteIndex;
 
-    abort_unless(
-        is_scalar($index)
-            && ctype_digit((string) $index)
-            && isset(
-                $this->finalListOfMeetingRoomPartners[(int) $index]['id']
-            ),
-        422,
-        'The selected partner is no longer available. Refresh and try again.'
-    );
+        abort_unless(
+            is_scalar($index)
+                && ctype_digit((string) $index)
+                && isset(
+                    $this->finalListOfMeetingRoomPartners[(int) $index]['id']
+                ),
+            422,
+            'The selected partner is no longer available. Refresh and try again.'
+        );
 
-    $partnerId = (int) $this->finalListOfMeetingRoomPartners[
-        (int) $index
-    ]['id'];
+        $partnerId = (int) $this->finalListOfMeetingRoomPartners[(int) $index]['id'];
 
-    DB::transaction(function () use ($partnerId) {
-        // Coordinate with the WordPress linking/import/update workflows.
-        $event = Events::whereKey($this->event->id)
-            ->lockForUpdate()
-            ->firstOrFail();
+        DB::transaction(function () use ($partnerId) {
+            // Coordinate with the WordPress linking/import/update workflows.
+            $event = Events::whereKey($this->event->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $meetingRoomPartner = MeetingRoomPartners::where(
-            'event_id',
-            $event->id
-        )
-            ->whereKey($partnerId)
-            ->lockForUpdate()
-            ->firstOrFail();
+            $meetingRoomPartner = MeetingRoomPartners::where(
+                'event_id',
+                $event->id
+            )
+                ->whereKey($partnerId)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if ($meetingRoomPartner->logo_media_id) {
-            mediaUsageUpdate(
-                MediaUsageUpdateTypes::REMOVED_ONLY->value,
-                $meetingRoomPartner->logo_media_id,
-                MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value,
-                $meetingRoomPartner->id,
-                getMediaUsageId(
+            if ($meetingRoomPartner->logo_media_id) {
+                mediaUsageUpdate(
+                    MediaUsageUpdateTypes::REMOVED_ONLY->value,
                     $meetingRoomPartner->logo_media_id,
                     MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value,
-                    $meetingRoomPartner->id
-                )
-            );
-        }
+                    $meetingRoomPartner->id,
+                    getMediaUsageId(
+                        $meetingRoomPartner->logo_media_id,
+                        MediaEntityTypes::MEETING_ROOM_PARTNER_LOGO->value,
+                        $meetingRoomPartner->id
+                    )
+                );
+            }
 
-        if ($meetingRoomPartner->banner_media_id) {
-            mediaUsageUpdate(
-                MediaUsageUpdateTypes::REMOVED_ONLY->value,
-                $meetingRoomPartner->banner_media_id,
-                MediaEntityTypes::MEETING_ROOM_PARTNER_BANNER->value,
-                $meetingRoomPartner->id,
-                getMediaUsageId(
+            if ($meetingRoomPartner->banner_media_id) {
+                mediaUsageUpdate(
+                    MediaUsageUpdateTypes::REMOVED_ONLY->value,
                     $meetingRoomPartner->banner_media_id,
                     MediaEntityTypes::MEETING_ROOM_PARTNER_BANNER->value,
+                    $meetingRoomPartner->id,
+                    getMediaUsageId(
+                        $meetingRoomPartner->banner_media_id,
+                        MediaEntityTypes::MEETING_ROOM_PARTNER_BANNER->value,
+                        $meetingRoomPartner->id
+                    )
+                );
+            }
+
+            // Remove every WordPress source link for this app partner.
+            DB::table('wordpress_meeting_room_partner_links')
+                ->where('event_id', $event->id)
+                ->where(
+                    'meeting_room_partner_id',
                     $meetingRoomPartner->id
                 )
-            );
-        }
+                ->delete();
 
-        // Remove every WordPress source link for this app partner.
-        DB::table('wordpress_meeting_room_partner_links')
-            ->where('event_id', $event->id)
-            ->where(
-                'meeting_room_partner_id',
-                $meetingRoomPartner->id
-            )
-            ->delete();
+            $meetingRoomPartner->delete();
+        });
 
-        $meetingRoomPartner->delete();
-    });
+        $this->activeDeleteIndex = null;
 
-    $this->activeDeleteIndex = null;
+        $this->resetEditMeetingRoomPartnerDateTimeFields();
+        $this->loadMeetingRoomPartners();
 
-    $this->resetEditMeetingRoomPartnerDateTimeFields();
-    $this->loadMeetingRoomPartners();
-
-    $this->dispatchBrowserEvent('swal:success', [
-        'type' => 'success',
-        'message' => 'Meeting room partner and its WordPress links deleted successfully!',
-        'text' => 'If the source record still exists in WordPress, it can appear in a fresh creation preview.',
-    ]);
-}
+        $this->dispatchBrowserEvent('swal:success', [
+            'type' => 'success',
+            'message' => 'Meeting room partner and its WordPress links deleted successfully!',
+            'text' => 'If the source record still exists in WordPress, it can appear in a fresh creation preview.',
+        ]);
+    }
 }

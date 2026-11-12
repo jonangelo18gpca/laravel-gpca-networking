@@ -68,6 +68,7 @@
 
                 {{-- Everyday actions --}}
                 <div class="border-t border-gray-100">
+
                     <details wire:ignore.self>
                         <summary class="cursor-pointer py-4 text-sm font-semibold text-headingTextColor">
                             Update linked sessions
@@ -88,6 +89,19 @@
                             @include('livewire.event.data-sync.create-preview')
                         </div>
                     </details>
+
+
+                    <details wire:ignore.self class="border-t border-gray-100">
+                        <summary class="cursor-pointer py-4 text-sm font-semibold text-headingTextColor">
+                            Sync agenda speakers
+                        </summary>
+
+                        <div class="pb-4">
+                            @include('livewire.event.data-sync.agenda-speaker-sync')
+                        </div>
+                    </details>
+
+
                 </div>
 
                 {{-- Occasional setup --}}
